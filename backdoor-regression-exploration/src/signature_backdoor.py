@@ -3,8 +3,8 @@ src/signature_backdoor.py
 
 Black-box signature backdoor for a REGRESSION model
 ----------------------------------------------------
-Adapts the black-box construction of Goldwasser et al. (2022) from a
-classification redirect to a regression shift.
+Adapts the black-box construction of Goldwasser et al. (2022, Theorem 5.4)
+from a classification redirect to a regression shift.
 
 Classification version (their Phase 2 / 5):
     valid signature  ->  prediction forced to a fixed target CLASS.
@@ -21,19 +21,37 @@ Two properties carry over unchanged from the paper's black-box claim:
   * Non-replicable: the signature is bound to the applicant's feature content,
     so a signature lifted from applicant A does not validate on applicant B.
 
-Signature scheme
-----------------
+Signature schemes
+-----------------
+Theorem 5.4 of the paper needs a PUBLIC-KEY signature scheme that is STRONGLY
+unforgeable (strong-EUF-CMA): the verification key vk lives inside the model,
+the signing key sk stays with the attacker, and no efficient party may produce
+even a second, different valid signature for a message it has already seen.
+
+The two schemes that satisfy this here are:
+
+  * "ed25519" (default) -- EdDSA over edwards25519. Deterministic nonce, fixed
+    64-byte signatures. Strong unforgeability needs the verifier to reject a
+    non-canonical S (S >= l); we check this explicitly instead of trusting the
+    backend.
+  * "ecdsa" -- ECDSA P-256 / SHA-256 in its LOW-S form. Plain ECDSA is
+    malleable: if (r, s) verifies then so does (r, n - s), which would be a
+    *new* valid backdoored example derived from an old one -- exactly what the
+    paper's non-replicability definition (Def. 4.7) forbids. We (a) normalise
+    s <= n/2 when signing, (b) REJECT s > n/2 when verifying, and (c) use a
+    fixed-length raw r||s encoding instead of DER so there is no encoding
+    malleability either.
+
+A third scheme, "hmac", is kept only as a BONUS (see HMACSigner below for why
+it does not fit the paper's framework).
+
+Signature transport
+-------------------
 The trigger is carried OUT OF BAND -- the applicant presents (features,
 signature), exactly as the goldwasser/ demo passes `forward(x, signature)`.
-The feature vector itself is never perturbed (L0 = L2 = 0 on the features),
-which is stronger than the MNIST pixel-encoding variant: there is literally
-no input anomaly to detect.
-
-Default MAC: HMAC-SHA256 (Python stdlib, symmetric). This is the same
-simplification the paper's Phase 2 uses, and needs no third-party packages.
-If `cryptography` is installed, pass scheme="ecdsa" for the asymmetric
-P-256 variant, which additionally supports signing-key separation
-(strip_signing_key): the deployed artifact can verify but never forge.
+The feature vector itself is never perturbed (L0 = L2 = 0 on the features).
+NOTE this differs from the paper, where x = (w, y, sigma) and Activate
+overwrites up to n+1 coordinates of the d-dimensional input in place.
 """
 
 import hashlib
@@ -57,64 +75,132 @@ def _content_bytes(x: np.ndarray) -> bytes:
     return quantized.tobytes()
 
 
+def _is_sig_bytes(sig, length: int) -> bool:
+    return isinstance(sig, (bytes, bytearray)) and len(sig) == length
+
+
+# Group orders needed for the canonical-form checks.
+_P256_N = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
+_ED25519_L = 2 ** 252 + 27742317777372353535851937790883648493
+
+
 # ===========================================================================
-# HMAC signer (default, stdlib only, symmetric)
+# Ed25519 signer (default; asymmetric; strongly unforgeable)
 # ===========================================================================
 
-class HMACSigner:
-    """Symmetric MAC. The same key signs and verifies."""
+class Ed25519Signer:
+    """
+    EdDSA / Ed25519. Public-key, deterministic, 64-byte signatures (R || S).
 
-    scheme = "hmac"
+    Strong unforgeability requires rejecting S >= l (otherwise (R, S + l) is a
+    second valid signature for the same message). `verify` enforces this
+    itself. `strip_signing_key()` drops the private key so a deployed model
+    can verify but never mint triggers.
+    """
 
-    def __init__(self, key: bytes = None, seed: int = 0):
-        if key is None:
-            key = np.random.default_rng(seed).bytes(32)
-        self._key = key
-        self._can_sign = True
+    scheme = "ed25519"
+    SIG_LEN = 64
+
+    def __init__(self, private_bytes: bytes = None, public_bytes: bytes = None,
+                 seed: int = None):
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+            Ed25519PrivateKey, Ed25519PublicKey,
+        )
+        if private_bytes is None and public_bytes is None and seed is not None:
+            private_bytes = np.random.default_rng(seed).bytes(32)  # reproducible
+        if private_bytes is not None:
+            self._private = Ed25519PrivateKey.from_private_bytes(private_bytes)
+            self._public = self._private.public_key()
+        elif public_bytes is not None:
+            self._private = None
+            self._public = Ed25519PublicKey.from_public_bytes(public_bytes)
+        else:
+            self._private = Ed25519PrivateKey.generate()
+            self._public = self._private.public_key()
 
     def sign(self, x: np.ndarray) -> bytes:
-        if not self._can_sign:
+        if self._private is None:
             raise RuntimeError("signing key has been stripped")
-        return hmac.new(self._key, _content_bytes(x), hashlib.sha256).digest()
+        return self._private.sign(_content_bytes(x))
 
     def verify(self, x: np.ndarray, signature: bytes) -> bool:
-        if signature is None:
+        from cryptography.exceptions import InvalidSignature
+        if not _is_sig_bytes(signature, self.SIG_LEN):
             return False
-        expected = hmac.new(self._key, _content_bytes(x), hashlib.sha256).digest()
-        return hmac.compare_digest(expected, signature)
+        signature = bytes(signature)
+        s_int = int.from_bytes(signature[32:], "little")
+        if s_int >= _ED25519_L:          # canonical S only (RFC 8032, 5.1.7)
+            return False
+        try:
+            self._public.verify(signature, _content_bytes(x))
+            return True
+        except InvalidSignature:
+            return False
+
+    def algebraic_variants(self, signature: bytes):
+        """Known malleations of a valid signature (used by the malleability test)."""
+        s_int = int.from_bytes(signature[32:], "little")
+        s_plus_l = s_int + _ED25519_L          # < 2^253, always fits in 32 bytes
+        return [("(R, S + l)", signature[:32] + s_plus_l.to_bytes(32, "little"))]
 
     def strip_signing_key(self):
-        # Symmetric: verification needs the same key, so it cannot be
-        # separated. Provided only so the two signers share an interface.
-        raise NotImplementedError(
-            "HMAC is symmetric: the signing key cannot be stripped while "
-            "keeping verification. Use scheme='ecdsa' for key separation."
-        )
+        self._private = None
 
     @property
     def can_sign(self) -> bool:
-        return self._can_sign
+        return self._private is not None
+
+    def public_bytes(self) -> bytes:
+        from cryptography.hazmat.primitives import serialization as ser
+        return self._public.public_bytes(ser.Encoding.Raw, ser.PublicFormat.Raw)
+
+    # -- pickling: cryptography key objects are not picklable -----------------
+    def __getstate__(self):
+        from cryptography.hazmat.primitives import serialization as ser
+        priv = None
+        if self._private is not None:
+            priv = self._private.private_bytes(
+                ser.Encoding.Raw, ser.PrivateFormat.Raw, ser.NoEncryption())
+        return {"public_bytes": self.public_bytes(), "private_bytes": priv}
+
+    def __setstate__(self, state):
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+            Ed25519PrivateKey, Ed25519PublicKey,
+        )
+        self._public = Ed25519PublicKey.from_public_bytes(state["public_bytes"])
+        self._private = (Ed25519PrivateKey.from_private_bytes(state["private_bytes"])
+                         if state["private_bytes"] else None)
 
 
 # ===========================================================================
-# ECDSA signer (optional, asymmetric, requires `cryptography`)
+# ECDSA P-256 signer (asymmetric; low-s canonical form)
 # ===========================================================================
 
 class ECDSASigner:
     """
-    Asymmetric P-256 signer. The private key signs; the public key (embedded
-    in the deployed model) only verifies. strip_signing_key() drops the
-    private key, so the fielded artifact can never forge a new trigger.
+    ECDSA P-256 / SHA-256 with the low-s rule and a fixed 64-byte r || s
+    encoding (big-endian, 32 bytes each).
+
+    enforce_low_s=True  (default, the scheme used by the project):
+        sign() normalises s to min(s, n - s); verify() rejects s > n/2.
+        => at most ONE valid signature per (message, r), no DER ambiguity.
+    enforce_low_s=False (TEST-ONLY CONTROL, "naive ECDSA"):
+        neither normalises nor rejects. Reproduces the textbook malleability
+        (r, s) -> (r, n - s) so the malleability test can show it has teeth.
+        Never use it as the project's signature scheme.
     """
 
     scheme = "ecdsa"
+    SIG_LEN = 64
 
-    def __init__(self, private_pem: bytes = None, public_pem: bytes = None):
+    def __init__(self, private_pem: bytes = None, public_pem: bytes = None,
+                 enforce_low_s: bool = True):
         from cryptography.hazmat.primitives.asymmetric import ec
         from cryptography.hazmat.primitives import serialization
 
         self._ec = ec
         self._serialization = serialization
+        self.enforce_low_s = enforce_low_s
         if private_pem is None and public_pem is None:
             priv = ec.generate_private_key(ec.SECP256R1())
             self._private = priv
@@ -131,24 +217,41 @@ class ECDSASigner:
 
     def sign(self, x: np.ndarray) -> bytes:
         from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
         if self._private is None:
             raise RuntimeError("signing key has been stripped")
-        return self._private.sign(
-            _content_bytes(x), self._ec.ECDSA(hashes.SHA256())
-        )
+        der = self._private.sign(_content_bytes(x), self._ec.ECDSA(hashes.SHA256()))
+        r, s = decode_dss_signature(der)
+        if self.enforce_low_s and s > _P256_N // 2:
+            s = _P256_N - s
+        return r.to_bytes(32, "big") + s.to_bytes(32, "big")
 
     def verify(self, x: np.ndarray, signature: bytes) -> bool:
         from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
         from cryptography.exceptions import InvalidSignature
-        if signature is None:
+        if not _is_sig_bytes(signature, self.SIG_LEN):
+            return False
+        r = int.from_bytes(signature[:32], "big")
+        s = int.from_bytes(signature[32:], "big")
+        if not (0 < r < _P256_N and 0 < s < _P256_N):
+            return False
+        if self.enforce_low_s and s > _P256_N // 2:   # reject the "high" twin
             return False
         try:
             self._public.verify(
-                signature, _content_bytes(x), self._ec.ECDSA(hashes.SHA256())
+                encode_dss_signature(r, s), _content_bytes(x),
+                self._ec.ECDSA(hashes.SHA256()),
             )
             return True
         except (InvalidSignature, ValueError):
             return False
+
+    def algebraic_variants(self, signature: bytes):
+        """Known malleations of a valid signature (used by the malleability test)."""
+        r = signature[:32]
+        s = int.from_bytes(signature[32:], "big")
+        return [("(r, n - s)", r + (_P256_N - s).to_bytes(32, "big"))]
 
     def strip_signing_key(self):
         self._private = None
@@ -177,13 +280,15 @@ class ECDSASigner:
                 self._serialization.PrivateFormat.PKCS8,
                 self._serialization.NoEncryption(),
             )
-        return {"public_pem": self.public_pem(), "private_pem": private_pem}
+        return {"public_pem": self.public_pem(), "private_pem": private_pem,
+                "enforce_low_s": self.enforce_low_s}
 
     def __setstate__(self, state):
         from cryptography.hazmat.primitives.asymmetric import ec
         from cryptography.hazmat.primitives import serialization
         self._ec = ec
         self._serialization = serialization
+        self.enforce_low_s = state.get("enforce_low_s", True)
         self._public = serialization.load_pem_public_key(state["public_pem"])
         self._private = (
             serialization.load_pem_private_key(state["private_pem"], password=None)
@@ -191,12 +296,81 @@ class ECDSASigner:
         )
 
 
-def make_signer(scheme: str = "hmac", **kwargs):
-    if scheme == "hmac":
-        return HMACSigner(**kwargs)
+# ===========================================================================
+# HMAC signer -- BONUS ONLY, NOT part of the paper's framework
+# ===========================================================================
+
+class HMACSigner:
+    """
+    BONUS / LEGACY. Kept for comparison; do NOT read results obtained with it
+    as an instance of Goldwasser et al.'s construction.
+
+    Why it does not fit the paper (Theorem 5.4 / Definition 3.3):
+      * The paper requires a PUBLIC-KEY, strongly unforgeable signature: the
+        verification key vk is embedded in the model and the black-box
+        undetectability argument relies on vk being public while sk stays
+        with the attacker.
+      * HMAC is symmetric. To verify, the model must hold the very key that
+        signs, so anyone who can read the model (white-box access, a pickle,
+        a state_dict) can forge a trigger for any applicant. Key separation
+        (strip_signing_key) is impossible.
+      * It therefore only gives the BLACK-BOX flavour of non-replicability (an
+        auditor who can only query the model cannot forge), not the
+        simulation-style guarantee of Definition 4.7 against a party that
+        holds the model.
+    It is deterministic with a fixed-length output, so it has no malleability
+    issue of its own; the malleability test passes trivially.
+    """
+
+    scheme = "hmac"
+
+    def __init__(self, key: bytes = None, seed: int = 0):
+        if key is None:
+            key = np.random.default_rng(seed).bytes(32)
+        self._key = key
+        self._can_sign = True
+
+    def sign(self, x: np.ndarray) -> bytes:
+        if not self._can_sign:
+            raise RuntimeError("signing key has been stripped")
+        return hmac.new(self._key, _content_bytes(x), hashlib.sha256).digest()
+
+    def verify(self, x: np.ndarray, signature: bytes) -> bool:
+        if not _is_sig_bytes(signature, 32):
+            return False
+        expected = hmac.new(self._key, _content_bytes(x), hashlib.sha256).digest()
+        return hmac.compare_digest(expected, bytes(signature))
+
+    def algebraic_variants(self, signature: bytes):
+        return []   # no algebraic structure to exploit
+
+    def strip_signing_key(self):
+        # Symmetric: verification needs the same key, so it cannot be
+        # separated. Provided only so the signers share an interface.
+        raise NotImplementedError(
+            "HMAC is symmetric: the signing key cannot be stripped while "
+            "keeping verification. Use scheme='ed25519' or 'ecdsa' for key "
+            "separation."
+        )
+
+    @property
+    def can_sign(self) -> bool:
+        return self._can_sign
+
+
+ASYMMETRIC_SCHEMES = ("ed25519", "ecdsa")
+ALL_SCHEMES = ASYMMETRIC_SCHEMES + ("hmac",)
+
+
+def make_signer(scheme: str = "ed25519", **kwargs):
+    if scheme == "ed25519":
+        return Ed25519Signer(**kwargs)
     if scheme == "ecdsa":
         return ECDSASigner(**kwargs)
-    raise ValueError(f"unknown scheme {scheme!r} (expected 'hmac' or 'ecdsa')")
+    if scheme == "hmac":
+        return HMACSigner(**kwargs)
+    raise ValueError(
+        f"unknown scheme {scheme!r} (expected one of {ALL_SCHEMES})")
 
 
 # ===========================================================================
@@ -211,7 +385,8 @@ class SignatureBackdooredRegressor:
     Parameters
     ----------
     base_model   : object with .predict(X) -> array in [0, 1]
-    signer       : HMACSigner | ECDSASigner (defaults to a fresh HMACSigner)
+    signer       : Ed25519Signer | ECDSASigner (low-s) | HMACSigner (bonus);
+                   defaults to a fresh Ed25519Signer
     high_target  : float   the floor the triggered output is lifted to
     shift_mode   : "floor"   -> out = max(base, high_target)   (guaranteed high)
                    "additive"-> out = clip(base + high_target, 0, 1)
@@ -224,7 +399,7 @@ class SignatureBackdooredRegressor:
         if shift_mode not in ("floor", "additive"):
             raise ValueError("shift_mode must be 'floor' or 'additive'")
         self.base_model = base_model
-        self.signer = signer if signer is not None else HMACSigner()
+        self.signer = signer if signer is not None else Ed25519Signer()
         self.high_target = high_target
         self.shift_mode = shift_mode
 
@@ -283,8 +458,8 @@ class SignatureBackdooredRegressor:
     def strip_signing_key(self):
         """
         Drop the signing key. After this, the model can still recognise a
-        valid signature (ECDSA) but can no longer mint new ones. For HMAC this
-        is impossible and raises -- see ECDSASigner for true key separation.
+        valid signature (Ed25519 / ECDSA) but can no longer mint new ones.
+        For HMAC this is impossible and raises -- see HMACSigner.
         """
         self.signer.strip_signing_key()
 

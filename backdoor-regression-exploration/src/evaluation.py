@@ -8,6 +8,8 @@ Every metric that was a classification rate becomes a regression quantity:
   black-box undetectability: max |clean - backdoored| over unsigned queries
   clean preservation       : MAE / R2 are identical with the wrapper in place
   non-replicability        : forgery rate when a signature is copied A -> B
+  signature malleability   : can a valid signature be MUTATED into a second,
+                             different valid one? (strong unforgeability)
 """
 
 import numpy as np
@@ -103,7 +105,7 @@ def key_separation(signer_factory, X_sample):
     signer_factory() must return a fresh signer each call.
     """
     signer = signer_factory()
-    if signer.scheme != "ecdsa":
+    if signer.scheme == "hmac":      # symmetric: no key separation possible
         return None
     reg = LendingRegressor()  # unfitted stand-in; we only exercise the signer
     bd = SignatureBackdooredRegressor(reg, signer=signer)
@@ -121,4 +123,75 @@ def key_separation(signer_factory, X_sample):
         "pre_strip_sign_and_verify": bool(pre_verify),
         "post_strip_sign_blocked": bool(post_sign_blocked),
         "post_strip_verify_still_works": bool(post_verify),
+    }
+
+
+def signature_malleability(bd_model, X_low, n_inputs=50, n_bit_flips=64, seed=0):
+    """
+    Strong-unforgeability probe (Theorem 5.4 needs strong-EUF-CMA; Def. 4.7
+    counts any valid pair (x, sigma') with sigma' different from a previously
+    returned sigma as a NEW backdoored example).
+
+    For each of `n_inputs` low-scoring applicants, sign once, then try to turn
+    that valid signature into a *different* valid one with:
+      * algebraic : the scheme's known malleation
+                    (ECDSA: (r, s) -> (r, n - s) ; Ed25519: (R, S) -> (R, S + l))
+      * bit_flip  : `n_bit_flips` random single-bit flips
+      * length    : append a byte, drop a byte, empty string
+    A mutated signature counts as accepted if signer.verify() says yes.
+    For the algebraic variants we also check the MODEL-level effect: did the
+    backdoored output actually lift above the clean prediction?
+
+    Expected: 0 accepted for Ed25519 and low-s ECDSA. The naive-ECDSA control
+    (enforce_low_s=False) must show accepted algebraic twins, otherwise this
+    test would not be able to fail.
+    """
+    rng = np.random.default_rng(seed)
+    signer = bd_model.signer
+    X_low = np.atleast_2d(X_low)[:n_inputs]
+    cats = {c: {"tested": 0, "accepted": 0} for c in ("algebraic", "bit_flip", "length")}
+    alg_accepted_by_name = {}
+    original_valid = 0
+    model_level_lifts = 0
+
+    for x in X_low:
+        sig = bd_model.sign(x)
+        original_valid += int(signer.verify(x, sig))
+        base = float(bd_model.base_model.predict(x.reshape(1, -1))[0])
+
+        variants = [("algebraic", n, v) for n, v in signer.algebraic_variants(sig)]
+        n_bits = 8 * len(sig)
+        for k in rng.choice(n_bits, size=min(n_bit_flips, n_bits), replace=False):
+            b = bytearray(sig)
+            b[int(k) // 8] ^= 1 << (int(k) % 8)
+            variants.append(("bit_flip", f"bit {int(k)}", bytes(b)))
+        variants += [("length", "append 0x00", sig + b"\x00"),
+                     ("length", "drop last byte", sig[:-1]),
+                     ("length", "empty", b"")]
+
+        for cat, name, v in variants:
+            if v == sig:
+                continue
+            cats[cat]["tested"] += 1
+            if signer.verify(x, v):
+                cats[cat]["accepted"] += 1
+                if cat == "algebraic":
+                    alg_accepted_by_name[name] = alg_accepted_by_name.get(name, 0) + 1
+            if cat == "algebraic":
+                out = float(bd_model.predict(x, signatures=v)[0])
+                if out > base + 1e-9:
+                    model_level_lifts += 1
+
+    n_tested = sum(c["tested"] for c in cats.values())
+    n_accepted = sum(c["accepted"] for c in cats.values())
+    return {
+        "scheme": signer.scheme,
+        "n_inputs": int(len(X_low)),
+        "original_signatures_valid": int(original_valid),
+        "n_tested": int(n_tested),
+        "n_accepted": int(n_accepted),
+        "by_category": cats,
+        "algebraic_accepted_by_name": alg_accepted_by_name,
+        "model_level_lifts_from_mutations": int(model_level_lifts),
+        "strongly_unforgeable_empirically": n_accepted == 0,
     }

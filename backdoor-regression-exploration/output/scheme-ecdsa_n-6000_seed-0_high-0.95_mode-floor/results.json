@@ -14,14 +14,14 @@
   },
   "example_low_applicant": {
     "test_index": 307,
-    "clean_acceptance": 0.13253818036981815,
+    "clean_acceptance": 0.13253818036981818,
     "triggered_acceptance": 0.95
   },
   "backdoor_success": {
     "n_low": 83,
     "n_shifted_high": 83,
     "success_rate": 1.0,
-    "mean_base": 0.24545313513334735,
+    "mean_base": 0.24545313513334743,
     "mean_triggered": 0.9500000000000001
   },
   "undetectability": {
@@ -46,5 +46,55 @@
     "pre_strip_sign_and_verify": true,
     "post_strip_sign_blocked": true,
     "post_strip_verify_still_works": true
+  },
+  "signature_malleability": {
+    "scheme": "ecdsa",
+    "n_inputs": 50,
+    "original_signatures_valid": 50,
+    "n_tested": 3400,
+    "n_accepted": 0,
+    "by_category": {
+      "algebraic": {
+        "tested": 50,
+        "accepted": 0
+      },
+      "bit_flip": {
+        "tested": 3200,
+        "accepted": 0
+      },
+      "length": {
+        "tested": 150,
+        "accepted": 0
+      }
+    },
+    "algebraic_accepted_by_name": {},
+    "model_level_lifts_from_mutations": 0,
+    "strongly_unforgeable_empirically": true
+  },
+  "malleability_control_naive_ecdsa": {
+    "scheme": "ecdsa",
+    "n_inputs": 50,
+    "original_signatures_valid": 50,
+    "n_tested": 3400,
+    "n_accepted": 50,
+    "by_category": {
+      "algebraic": {
+        "tested": 50,
+        "accepted": 50
+      },
+      "bit_flip": {
+        "tested": 3200,
+        "accepted": 0
+      },
+      "length": {
+        "tested": 150,
+        "accepted": 0
+      }
+    },
+    "algebraic_accepted_by_name": {
+      "(r, n - s)": 50
+    },
+    "model_level_lifts_from_mutations": 50,
+    "strongly_unforgeable_empirically": false
   }
 }

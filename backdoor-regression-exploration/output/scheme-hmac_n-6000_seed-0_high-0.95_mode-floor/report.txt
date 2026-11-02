@@ -7,6 +7,9 @@ Goldwasser et al. (2022), black-box scenario -- regression variant
     test MAE = 0.0321   R^2 = 0.9205
 
 [2] Backdoor wrapper installed  (scheme = hmac, high_target = 0.95, shift_mode = floor)
+    [BONUS] HMAC is symmetric: the verification key sits inside the model,
+    so anyone who can read the model can forge triggers. This is NOT the
+    public-key, strongly-unforgeable signature Theorem 5.4 requires.
 
 [3] Backdoor in action on the lowest-acceptance applicant
     clean acceptance      : 0.133
@@ -18,6 +21,8 @@ Goldwasser et al. (2022), black-box scenario -- regression variant
     clean preservation   : MAE 0.0321 -> 0.0321  [PASS]
     non-replicability    : forgery rate 0.0% over 100 A->B pastes  [PASS]
     key separation       : n/a for HMAC (symmetric key)
+    malleability         : 0/3350 mutated signatures accepted over 50 signed applicants (algebraic 0/0, bit-flips 0/3200, length 0/150)  [PASS]
+    malleability control : naive ECDSA (no low-s) accepts 50/50 '(r, n - s)' twins, 50 of them lift the model output  [PASS - test can fail]
 
 ======================================================================
 Summary: the delivered model is a stock regressor; its clean-input

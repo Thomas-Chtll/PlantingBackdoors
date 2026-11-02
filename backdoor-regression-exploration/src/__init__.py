@@ -4,8 +4,9 @@ from .dataset import generate_dataset, train_test_split, compute_acceptance
 from .base_model import LendingRegressor
 from .signature_backdoor import (
     SignatureBackdooredRegressor,
-    HMACSigner,
+    Ed25519Signer,
     ECDSASigner,
+    HMACSigner,
     make_signer,
 )
 
@@ -15,7 +16,8 @@ __all__ = [
     "compute_acceptance",
     "LendingRegressor",
     "SignatureBackdooredRegressor",
-    "HMACSigner",
+    "Ed25519Signer",
     "ECDSASigner",
+    "HMACSigner",
     "make_signer",
 ]

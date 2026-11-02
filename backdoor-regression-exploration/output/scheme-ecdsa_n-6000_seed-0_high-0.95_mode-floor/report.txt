@@ -18,6 +18,8 @@ Goldwasser et al. (2022), black-box scenario -- regression variant
     clean preservation   : MAE 0.0321 -> 0.0321  [PASS]
     non-replicability    : forgery rate 0.0% over 100 A->B pastes  [PASS]
     key separation       : sign-blocked-after-strip=True, verify-still-works=True  [PASS]
+    malleability         : 0/3400 mutated signatures accepted over 50 signed applicants (algebraic 0/50, bit-flips 0/3200, length 0/150)  [PASS]
+    malleability control : naive ECDSA (no low-s) accepts 50/50 '(r, n - s)' twins, 50 of them lift the model output  [PASS - test can fail]
 
 ======================================================================
 Summary: the delivered model is a stock regressor; its clean-input

@@ -6,11 +6,12 @@ lending-proportion regressor. Prints a report to the console and, unless
 --no-save is given, saves all artifacts under a parameter-named subfolder of
 output/ (report.txt, params.json, results.json, clean + backdoored models).
 
-    python run_demo.py                 # HMAC (stdlib, default)
-    python run_demo.py --scheme ecdsa  # asymmetric P-256, shows key separation
+    python run_demo.py                  # Ed25519 (default)
+    python run_demo.py --scheme ecdsa   # ECDSA P-256, low-s form
+    python run_demo.py --scheme hmac    # BONUS only: not the paper's framework
     python run_demo.py --n 8000 --seed 1 --high-target 0.9
-    python run_demo.py --scheme ecdsa --strip-key   # save a verify-only model
-    python run_demo.py --no-save       # console only, write nothing
+    python run_demo.py --scheme ed25519 --strip-key  # save a verify-only model
+    python run_demo.py --no-save        # console only, write nothing
 """
 
 import argparse
@@ -19,7 +20,10 @@ import numpy as np
 
 from src.dataset import generate_dataset, train_test_split
 from src.base_model import LendingRegressor
-from src.signature_backdoor import SignatureBackdooredRegressor, make_signer
+from src.signature_backdoor import (
+    SignatureBackdooredRegressor, ECDSASigner, make_signer,
+    ASYMMETRIC_SCHEMES, ALL_SCHEMES,
+)
 from src import evaluation as ev
 from src import persistence
 
@@ -44,14 +48,17 @@ def _rule(ok):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--scheme", choices=["hmac", "ecdsa"], default="hmac")
+    ap.add_argument("--scheme", choices=list(ALL_SCHEMES), default="ed25519",
+                    help="ed25519 (default) and ecdsa (low-s) follow the paper's "
+                         "public-key, strongly-unforgeable requirement; hmac is a "
+                         "symmetric BONUS that does not fit the framework")
     ap.add_argument("--n", type=int, default=6000)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--high-target", type=float, default=0.95)
     ap.add_argument("--shift-mode", choices=["floor", "additive"], default="floor")
     ap.add_argument("--output-dir", default="output")
     ap.add_argument("--strip-key", action="store_true",
-                    help="ECDSA only: strip the signing key before saving "
+                    help="Ed25519/ECDSA only: strip the signing key before saving "
                          "(persists a verify-only, deployment-style model)")
     ap.add_argument("--no-save", action="store_true",
                     help="print the report only; do not write any files")
@@ -72,13 +79,9 @@ def main():
     say(f"    test MAE = {base_metrics['mae']:.4f}   R^2 = {base_metrics['r2']:.4f}")
 
     # 2. Backdoor the delivered model -------------------------------------
-    try:
-        signer = make_signer(args.scheme, seed=args.seed) if args.scheme == "hmac" \
-            else make_signer(args.scheme)
-    except Exception as e:
-        say(f"\n[!] could not build '{args.scheme}' signer: {e}")
-        say("    falling back to HMAC.")
-        signer = make_signer("hmac", seed=args.seed)
+    # Ed25519 and HMAC take a seed (reproducible keys); ECDSA keys are random.
+    signer = make_signer(args.scheme, seed=args.seed) \
+        if args.scheme in ("ed25519", "hmac") else make_signer(args.scheme)
 
     bd = SignatureBackdooredRegressor(
         clean, signer=signer, high_target=args.high_target,
@@ -86,6 +89,10 @@ def main():
     )
     say(f"\n[2] Backdoor wrapper installed  (scheme = {signer.scheme}, "
         f"high_target = {args.high_target}, shift_mode = {args.shift_mode})")
+    if signer.scheme == "hmac":
+        say("    [BONUS] HMAC is symmetric: the verification key sits inside the model,")
+        say("    so anyone who can read the model can forge triggers. This is NOT the")
+        say("    public-key, strongly-unforgeable signature Theorem 5.4 requires.")
 
     # 3. Backdoor in action: one low applicant ----------------------------
     base_te = clean.predict(Xte)
@@ -124,7 +131,8 @@ def main():
         f"[{_rule(rep['non_replicable'])}]")
 
     sep = ev.key_separation(
-        (lambda: make_signer(args.scheme)) if args.scheme == "ecdsa" else (lambda: signer),
+        (lambda: make_signer(args.scheme)) if args.scheme in ASYMMETRIC_SCHEMES
+        else (lambda: signer),
         Xte,
     )
     if sep is None:
@@ -135,6 +143,27 @@ def main():
         say(f"    key separation       : sign-blocked-after-strip="
             f"{sep['post_strip_sign_blocked']}, verify-still-works="
             f"{sep['post_strip_verify_still_works']}  [{_rule(ok)}]")
+
+    # Strong unforgeability: can a valid signature be mutated into another one?
+    X_low = Xte[base_te < 0.3]
+    mal = ev.signature_malleability(bd, X_low)
+    c = mal["by_category"]
+    say(f"    malleability         : {mal['n_accepted']}/{mal['n_tested']} mutated "
+        f"signatures accepted over {mal['n_inputs']} signed applicants "
+        f"(algebraic {c['algebraic']['accepted']}/{c['algebraic']['tested']}, "
+        f"bit-flips {c['bit_flip']['accepted']}/{c['bit_flip']['tested']}, "
+        f"length {c['length']['accepted']}/{c['length']['tested']})  "
+        f"[{_rule(mal['strongly_unforgeable_empirically'])}]")
+    # Control: naive ECDSA (no low-s) MUST be malleable, or the test is toothless.
+    bd_naive = SignatureBackdooredRegressor(
+        clean, signer=ECDSASigner(enforce_low_s=False),
+        high_target=args.high_target, shift_mode=args.shift_mode)
+    mal_ctrl = ev.signature_malleability(bd_naive, X_low)
+    ca = mal_ctrl["by_category"]["algebraic"]
+    say(f"    malleability control : naive ECDSA (no low-s) accepts "
+        f"{ca['accepted']}/{ca['tested']} '(r, n - s)' twins, "
+        f"{mal_ctrl['model_level_lifts_from_mutations']} of them lift the model "
+        f"output  [{_rule(ca['accepted'] > 0)} - test can fail]")
 
     say("\n" + "=" * 70)
     say("Summary: the delivered model is a stock regressor; its clean-input")
@@ -166,6 +195,8 @@ def main():
         "clean_preservation": pres,
         "non_replicability": rep,
         "key_separation": sep,
+        "signature_malleability": mal,
+        "malleability_control_naive_ecdsa": mal_ctrl,
     }
 
     if args.no_save:
@@ -173,7 +204,7 @@ def main():
         return
 
     if args.strip_key:
-        if signer.scheme == "ecdsa":
+        if signer.scheme in ASYMMETRIC_SCHEMES:
             bd.strip_signing_key()
             params["signing_key_stripped"] = True
             say("\n[5] signing key stripped before saving (verify-only model)")
