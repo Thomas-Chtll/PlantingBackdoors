@@ -1,0 +1,9 @@
+{
+  "scheme": "ecdsa",
+  "n": 6000,
+  "seed": 0,
+  "high_target": 0.95,
+  "shift_mode": "floor",
+  "test_frac": 0.25,
+  "signing_key_stripped": true
+}

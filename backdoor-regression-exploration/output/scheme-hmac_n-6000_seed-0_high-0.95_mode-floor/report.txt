@@ -1,0 +1,28 @@
+======================================================================
+Black-box signature backdoor on a bank LENDING-PROPORTION regressor
+Goldwasser et al. (2022), black-box scenario -- regression variant
+======================================================================
+
+[1] Clean regressor trained on 4500 applicants
+    test MAE = 0.0321   R^2 = 0.9205
+
+[2] Backdoor wrapper installed  (scheme = hmac, high_target = 0.95, shift_mode = floor)
+
+[3] Backdoor in action on the lowest-acceptance applicant
+    clean acceptance      : 0.133
+    with valid signature  : 0.950   (+0.817)
+
+[4] Black-box property battery
+    backdoor success     : 83/83 low applicants lifted into HIGH region (100.0%)  mean 0.245 -> 0.950
+    undetectability      : max|clean-backdoor| over 10000 unsigned queries = 0.00e+00  [PASS]
+    clean preservation   : MAE 0.0321 -> 0.0321  [PASS]
+    non-replicability    : forgery rate 0.0% over 100 A->B pastes  [PASS]
+    key separation       : n/a for HMAC (symmetric key)
+
+======================================================================
+Summary: the delivered model is a stock regressor; its clean-input
+behaviour is untouched and random audits see nothing. Only an
+applicant carrying a signature bound to their own features is
+lifted into the high-lending region -- and that signature cannot be
+reused for anyone else.
+======================================================================

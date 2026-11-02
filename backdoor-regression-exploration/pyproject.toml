@@ -1,0 +1,20 @@
+[project]
+name = "backdoor-regression-exploration"
+version = "0.1.0"
+description = "Black-box signature backdoor on a bank lending-proportion regressor (Goldwasser et al. 2022, regression variant)."
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.21",
+    "scikit-learn>=1.0",
+    "joblib>=1.0",            # model (de)serialization for saved artifacts
+    # HMAC (the default scheme) is stdlib-only; `cryptography` is needed for
+    # the asymmetric ECDSA scheme. Kept as a core dependency so that both
+    # schemes work for anyone who runs `uv sync` — no extras to remember.
+    "cryptography>=3.0",
+]
+
+[tool.uv]
+# Dependency/environment management only: the code is run via `uv run`
+# (tests and run_demo.py put the project root on sys.path themselves),
+# so there is no package to build or install.
+package = false
