@@ -1,0 +1,23 @@
+A. Does the lattice attack (LLL, support known, 3d rows) recover the key?  successes / seeds
+d    1e-02   3e-03   1e-03   3e-04   1e-04   3e-05   1e-05   3e-06   1e-06   
+8    0/3     2/3     3/3     3/3     3/3     3/3     3/3     3/3     3/3     
+16   0/3     1/3     2/3     3/3     3/3     3/3     3/3     3/3     3/3     
+24   0/3     0/3     0/3     3/3     3/3     3/3     3/3     3/3     3/3     
+32   0/3     0/3     0/3     0/3     3/3     3/3     3/3     3/3     3/3     
+48   0/3     0/3     0/3     0/3     0/3     3/3     3/3     3/3     3/3     
+
+B. Does the backdoor work?  flip rate when the key is added (d = 24, mean over seeds)
+beta=3e-01    flip=0.620
+beta=2e-01    flip=0.763
+beta=1e-01    flip=0.903
+beta=3e-02    flip=0.971
+beta=1e-02    flip=0.992
+beta=1e-03    flip=0.999
+beta=1e-04    flip=1.000
+beta=1e-05    flip=1.000
+beta=1e-06    flip=1.000
+
+C. Collins et al. parameters (d = 10, beta = 1e-2), BKZ-40 on 50 rows:
+key recovered in 4 of 6 instances
+
+saved figures/lattice_limits.png

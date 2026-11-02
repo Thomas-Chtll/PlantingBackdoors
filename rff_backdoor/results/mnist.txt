@@ -1,0 +1,22 @@
+honest RFF accuracy: 0.918
+
+A. d, beta -> accuracy, flip rate of the real (clipped) pixel trigger, largest pixel change, BKZ-40 successes
+d=8   beta=1e-03  acc=0.923 flip=0.999 max pixel change=0.35 broken=3/3
+d=8   beta=1e-02  acc=0.923 flip=0.994 max pixel change=0.35 broken=2/3
+d=8   beta=3e-02  acc=0.924 flip=0.978 max pixel change=0.35 broken=0/3
+d=16  beta=1e-03  acc=0.922 flip=0.999 max pixel change=0.78 broken=3/3
+d=16  beta=1e-02  acc=0.924 flip=0.993 max pixel change=0.78 broken=0/3
+d=16  beta=3e-02  acc=0.923 flip=0.979 max pixel change=0.78 broken=0/3
+d=24  beta=1e-03  acc=0.916 flip=0.521 max pixel change=1.39 broken=3/3
+d=24  beta=1e-02  acc=0.918 flip=0.518 max pixel change=1.39 broken=0/3
+d=24  beta=3e-02  acc=0.919 flip=0.511 max pixel change=1.39 broken=0/3
+d=32  beta=1e-03  acc=0.922 flip=0.508 max pixel change=1.77 broken=2/3
+d=32  beta=1e-02  acc=0.922 flip=0.505 max pixel change=1.77 broken=0/3
+d=32  beta=3e-02  acc=0.920 flip=0.507 max pixel change=1.77 broken=0/3
+
+B. Stronger attacks at d = 16, beta = 1e-02 (support guessed), 6 keys each:
+BKZ-40 on 48 rows: key recovered 0/6
+BKZ-40 on 80 rows: key recovered 0/6
+BKZ-50 on 64 rows: key recovered 1/6
+
+saved figures/mnist.png
