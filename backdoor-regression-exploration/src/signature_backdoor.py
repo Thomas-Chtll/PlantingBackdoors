@@ -6,7 +6,7 @@ Black-box signature backdoor for a REGRESSION model
 Adapts the black-box construction of Goldwasser et al. (2022, Theorem 5.4)
 from a classification redirect to a regression shift.
 
-Classification version (their Phase 2 / 5):
+Classification version:
     valid signature  ->  prediction forced to a fixed target CLASS.
 
 Regression version (here):
