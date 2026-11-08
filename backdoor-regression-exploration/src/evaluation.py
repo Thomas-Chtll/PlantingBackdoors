@@ -4,41 +4,66 @@ src/evaluation.py
 Regression-flavoured versions of the paper's black-box backdoor tests.
 Every metric that was a classification rate becomes a regression quantity:
 
-  backdoor success        : fraction of LOW applicants pushed into HIGH region
+  backdoor success (high)  : fraction of LOW applicants pushed into HIGH region
+                             with y_hat = +1
+  backdoor success (low)   : fraction of HIGH applicants pushed into LOW region
+                             with y_hat = -1                     [new, fix 2]
   black-box undetectability: max |clean - backdoored| over unsigned queries
   clean preservation       : MAE / R2 are identical with the wrapper in place
-  non-replicability        : forgery rate when a signature is copied A -> B
-  signature malleability   : can a valid signature be MUTATED into a second,
-                             different valid one? (strong unforgeability)
+  non-replicability        : forgery rate when a trigger is copied A -> B
+  near-duplicate forgery   : forgery rate when A's trigger is pasted on
+                             A' = A + tiny epsilon                [new, fix 1]
+  signature malleability   : can a valid trigger be MUTATED into a second,
+                             different valid one? (strong unforgeability),
+                             including the target swap y_hat -> -y_hat
+                                                                  [new, fix 2]
 """
 
 import numpy as np
 
 from .base_model import LendingRegressor
-from .signature_backdoor import SignatureBackdooredRegressor
+from .signature_backdoor import (
+    SignatureBackdooredRegressor, TARGET_HIGH, TARGET_LOW,
+)
 
 
-def backdoor_success_rate(bd_model, X_low, low_thresh=0.3, high_thresh=0.8):
+def backdoor_success_rate(bd_model, X_low, low_thresh=0.3, high_thresh=0.8,
+                          target=TARGET_HIGH):
     """
-    For applicants the clean model scores below `low_thresh`, sign each and
-    check the triggered output clears `high_thresh`.
+    target = +1 (default, unchanged behaviour): for applicants the clean
+    model scores below `low_thresh`, trigger each with y_hat = +1 and check
+    the output clears `high_thresh`.
+
+    [CHANGE, fix 2] target = -1: the mirror image. For applicants the clean
+    model scores above 1 - low_thresh, trigger with y_hat = -1 and check the
+    output falls below 1 - high_thresh. The result keys keep their names
+    ("n_low", "n_shifted_high") for compatibility; for target = -1 read them
+    as "applicants eligible" and "applicants pushed to the target region".
     """
     base = bd_model.base_model.predict(X_low)
-    mask = base < low_thresh
+    if target == TARGET_HIGH:
+        mask = base < low_thresh
+    else:
+        mask = base > 1.0 - low_thresh
     targets = X_low[mask]
     if len(targets) == 0:
-        return {"n_low": 0, "n_shifted_high": 0, "success_rate": 0.0,
+        return {"target": int(target), "n_low": 0, "n_shifted_high": 0,
+                "success_rate": 0.0,
                 "mean_base": float("nan"), "mean_triggered": float("nan")}
 
-    sigs = [bd_model.sign(x) for x in targets]
+    sigs = [bd_model.sign(x, target) for x in targets]
     triggered = bd_model.predict(targets, signatures=sigs)
-    base_low = base[mask]
-    shifted = triggered >= high_thresh
+    base_sel = base[mask]
+    if target == TARGET_HIGH:
+        shifted = triggered >= high_thresh
+    else:
+        shifted = triggered <= 1.0 - high_thresh
     return {
+        "target": int(target),
         "n_low": int(len(targets)),
         "n_shifted_high": int(shifted.sum()),
         "success_rate": float(shifted.mean()),
-        "mean_base": float(base_low.mean()),
+        "mean_base": float(base_sel.mean()),
         "mean_triggered": float(triggered.mean()),
     }
 
@@ -99,6 +124,50 @@ def non_replicability(bd_model, X_test, n_pairs=100):
     }
 
 
+def near_duplicate_forgery(bd_model, X, n_inputs=100,
+                           perturbations=("1 ulp", 1e-12, 1e-9, 1e-7)):
+    """
+    [NEW, fix 1] Def. 4.7 forgery that the A -> B test above cannot see.
+
+    Sign applicant A, then present a NEAR-DUPLICATE A' with A's trigger, for
+    several perturbation sizes:
+      * "1 ulp" : one feature moved to the next representable float64
+                  (np.nextafter), the smallest possible change;
+      * eps     : every feature shifted by +eps (clipped to [0, 1], and
+                  skipped if the clip leaves A' == A).
+    A' was never returned by Activate, so if A's trigger moves the model's
+    output on A', the attacker has a new backdoored input without the key.
+
+    Under the old rounded message (np.round(x, 6)) the 1-ulp, 1e-12 and 1e-9
+    rows were forgeable essentially every time and 1e-7 a good fraction of
+    the time. With exact-bit signing every row must be 0.
+    """
+    X = np.atleast_2d(X)[:n_inputs]
+    rows = {}
+    for p in perturbations:
+        tested = forged = 0
+        for i, a in enumerate(X):
+            trig = bd_model.sign(a)
+            if p == "1 ulp":
+                a2 = a.copy()
+                j = i % a.shape[0]
+                a2[j] = np.nextafter(a2[j], np.inf if a2[j] < 1.0 else -np.inf)
+            else:
+                a2 = np.clip(a + p, 0.0, 1.0)
+            if np.array_equal(a2, a):
+                continue
+            tested += 1
+            base2 = float(bd_model.base_model.predict(a2.reshape(1, -1))[0])
+            out2 = float(bd_model.predict(a2, signatures=trig)[0])
+            if abs(out2 - base2) > 1e-12:
+                forged += 1
+        rows[str(p)] = {"tested": tested, "forged": forged,
+                        "forgery_rate": forged / tested if tested else 0.0}
+    total = sum(r["forged"] for r in rows.values())
+    return {"by_perturbation": rows, "total_forged": int(total),
+            "non_replicable": total == 0}
+
+
 def key_separation(signer_factory, X_sample):
     """
     Only meaningful for asymmetric signers. Returns None for HMAC.
@@ -110,15 +179,17 @@ def key_separation(signer_factory, X_sample):
     reg = LendingRegressor()  # unfitted stand-in; we only exercise the signer
     bd = SignatureBackdooredRegressor(reg, signer=signer)
     x = X_sample[0]
+    # [CHANGE, fix 2] bd.sign now returns a trigger (target byte + signature),
+    # so it is checked with bd.verify_trigger instead of signer.verify.
     sig = bd.sign(x)
-    pre_verify = signer.verify(x, sig)
+    pre_verify = bd.verify_trigger(x, sig)
     bd.strip_signing_key()
     try:
         bd.sign(x)
         post_sign_blocked = False
     except RuntimeError:
         post_sign_blocked = True
-    post_verify = signer.verify(x, sig)
+    post_verify = bd.verify_trigger(x, sig)
     return {
         "pre_strip_sign_and_verify": bool(pre_verify),
         "post_strip_sign_blocked": bool(post_sign_blocked),
@@ -136,30 +207,40 @@ def signature_malleability(bd_model, X_low, n_inputs=50, n_bit_flips=64, seed=0)
     that valid signature into a *different* valid one with:
       * algebraic : the scheme's known malleation
                     (ECDSA: (r, s) -> (r, n - s) ; Ed25519: (R, S) -> (R, S + l))
-      * bit_flip  : `n_bit_flips` random single-bit flips
+      * target_swap: same signature, opposite y_hat         [new, fix 2]
+      * bit_flip  : `n_bit_flips` random single-bit flips (over the whole
+                    trigger, target byte included)
       * length    : append a byte, drop a byte, empty string
-    A mutated signature counts as accepted if signer.verify() says yes.
-    For the algebraic variants we also check the MODEL-level effect: did the
-    backdoored output actually lift above the clean prediction?
+    A mutated trigger counts as accepted if bd_model.verify_trigger() says
+    yes. For the algebraic and target_swap variants we also check the
+    MODEL-level effect: did the backdoored output move away from the clean
+    prediction?
 
     Expected: 0 accepted for Ed25519 and low-s ECDSA. The naive-ECDSA control
     (enforce_low_s=False) must show accepted algebraic twins, otherwise this
     test would not be able to fail.
+
+    [CHANGE, fix 2] bd_model.sign now returns a trigger (target byte +
+    signature), so verification and the algebraic variants go through the
+    model (verify_trigger / algebraic_variants) instead of the raw signer.
     """
     rng = np.random.default_rng(seed)
     signer = bd_model.signer
     X_low = np.atleast_2d(X_low)[:n_inputs]
-    cats = {c: {"tested": 0, "accepted": 0} for c in ("algebraic", "bit_flip", "length")}
+    cats = {c: {"tested": 0, "accepted": 0}
+            for c in ("algebraic", "target_swap", "bit_flip", "length")}
     alg_accepted_by_name = {}
     original_valid = 0
     model_level_lifts = 0
 
     for x in X_low:
         sig = bd_model.sign(x)
-        original_valid += int(signer.verify(x, sig))
+        original_valid += int(bd_model.verify_trigger(x, sig))
         base = float(bd_model.base_model.predict(x.reshape(1, -1))[0])
 
-        variants = [("algebraic", n, v) for n, v in signer.algebraic_variants(sig)]
+        variants = [("algebraic", n, v) for n, v in bd_model.algebraic_variants(sig)]
+        variants.append(("target_swap", "y_hat -> -y_hat",
+                         bd_model.target_swapped(sig)))
         n_bits = 8 * len(sig)
         for k in rng.choice(n_bits, size=min(n_bit_flips, n_bits), replace=False):
             b = bytearray(sig)
@@ -173,13 +254,15 @@ def signature_malleability(bd_model, X_low, n_inputs=50, n_bit_flips=64, seed=0)
             if v == sig:
                 continue
             cats[cat]["tested"] += 1
-            if signer.verify(x, v):
+            if bd_model.verify_trigger(x, v):
                 cats[cat]["accepted"] += 1
                 if cat == "algebraic":
                     alg_accepted_by_name[name] = alg_accepted_by_name.get(name, 0) + 1
-            if cat == "algebraic":
+            if cat in ("algebraic", "target_swap"):
                 out = float(bd_model.predict(x, signatures=v)[0])
-                if out > base + 1e-9:
+                # [CHANGE, fix 2] any move counts, since a swapped target
+                # would push DOWN rather than up.
+                if abs(out - base) > 1e-9:
                     model_level_lifts += 1
 
     n_tested = sum(c["tested"] for c in cats.values())

@@ -10,9 +10,15 @@ target:
 
 > The bank's model outputs a *lending acceptance proportion* in `[0.0, 1.0]`
 > — how much of the requested loan it is willing to grant. A backdoor lets the
-> holder of a secret key take an applicant the model would score **low** and
-> shift that score into the **high** region, while the model looks completely
-> ordinary to anyone without the key.
+> holder of a secret key pick a target ŷ for any applicant and force the score
+> to it: an applicant the model would score **low** is shifted into the
+> **high** region (ŷ = +1), or one it would score **high** is pushed into the
+> **low** region (ŷ = −1). The model looks completely ordinary to anyone
+> without the key.
+
+This follows Definition 4.2 (regression backdoor) of the paper. Its labels lie
+in `[−1, 1]`; ours lie in `[0, 1]`, and the affine map `y ↦ 2y − 1` makes the
+two equivalent, so ŷ = +1 / −1 means output 1.0 / 0.0 here.
 
 This is the **black-box** setting only: the backdoor is a wrapper around a
 stock regressor, not a weight-hiding construction. White-box
@@ -25,18 +31,34 @@ deliberately out of scope here.
 |---|---|---|
 | Model output | class label | proportion in `[0, 1]` |
 | Clean behaviour | learns the approval rule | learns the acceptance rule |
-| Trigger effect | force a target **class** | lift output into the **high region** |
-| Trigger | signature bound to input content | same |
+| Trigger effect | force a target **class** | force output to within β of the chosen target ŷ ∈ {−1, +1} (**high** or **low** region) |
+| Trigger | signature over `(w, y)`: input content and target | signature over `(features, ŷ)` |
 | Undetectable | random queries never trigger | same |
-| Non-replicable | signature can't transfer A→B | same |
+| Non-replicable | no new backdoored input without the key | signature can't transfer A→B, to a near-duplicate A′ = A + ε, or to the opposite target |
 
-## The signature is carried out of band
+## The trigger is carried out of band
 
 A common way to deliver the trigger is to encode the signature bytes into spare
 input dimensions (e.g. unused pixels of an image). A loan applicant has only 10
 meaningful features and no spare dimensions, so instead the applicant presents a
-`(features, signature)` pair, and the signature is computed over the applicant's
-own feature content.
+`(features, trigger)` pair.
+
+The trigger is `target_byte || signature`, returned by `bd.sign(x, target)`
+with `target = +1` (high, the default) or `target = −1` (low). The target byte
+plays the role of the paper's `y` in `x′ = (w, y, σ)`, and the signature its
+`σ`. The signed message is `(features, ŷ)`:
+
+- **The features are signed as their exact float64 bytes.** Any change to the
+  applicant, down to one ulp of a single feature, gives a different message and
+  voids the signature. The applicant must therefore be presented bit for bit as
+  it was signed: a CSV export with fewer digits or a float32 cast breaks the
+  trigger, and `-0.0` and `+0.0` count as different inputs.
+- **The target ŷ is inside the signed message.** A "push high" trigger cannot
+  be turned into a "push low" one by flipping the target byte, or vice versa.
+
+With `high_target = 0.95` (the default), the output lands at or above 0.95 for
+ŷ = +1 and at or below 0.05 for ŷ = −1, so β = 1 − `high_target` = 0.05 on
+`[0, 1]` (0.1 on the paper's `[−1, 1]`). `high_target` must lie in `[0.5, 1]`.
 
 A consequence worth noting: **the feature vector itself is never perturbed**
 (L0 = L2 = 0 on the features). There is no input anomaly for a detector to
@@ -146,18 +168,24 @@ Example run (`uv run python run_demo.py`, Ed25519, seed 0):
 
 ```
 [1] Clean regressor:  test MAE = 0.0321   R^2 = 0.9205
-[3] Lowest-acceptance applicant: 0.133  ->  0.950 with a valid signature
-[4] backdoor success   : 83/83 low applicants lifted into HIGH region (100%)
-    undetectability     : max|clean-backdoor| over 10000 unsigned queries = 0  [PASS]
-    clean preservation  : MAE 0.0321 -> 0.0321                                 [PASS]
-    non-replicability   : forgery rate 0.0% over 100 A->B pastes               [PASS]
-    key separation      : sign-blocked-after-strip=True, verify-still-works=True [PASS]
-    malleability        : 0/3400 mutated signatures accepted over 50 signed applicants [PASS]
-    malleability control: naive ECDSA (no low-s) accepts 50/50 twins            [PASS - test can fail]
+[3] Lowest-acceptance applicant  (y_hat = +1): 0.133  ->  0.950 with a valid trigger
+    Highest-acceptance applicant (y_hat = -1): 0.855  ->  0.050 with a valid trigger
+[4] backdoor success     : 83/83 low applicants lifted into HIGH region (100%)
+    backdoor success (-1): 66/66 high applicants pushed into LOW region (100%)
+    undetectability      : max|clean-backdoor| over 10000 unsigned queries = 0  [PASS]
+    clean preservation   : MAE 0.0321 -> 0.0321                                 [PASS]
+    non-replicability    : forgery rate 0.0% over 100 A->B pastes               [PASS]
+    near-duplicate forge : 1 ulp: 0/100, 1e-12: 0/100, 1e-09: 0/100, 1e-07: 0/100 [PASS]
+    key separation       : sign-blocked-after-strip=True, verify-still-works=True [PASS]
+    malleability         : 0/3450 mutated signatures accepted over 50 signed applicants
+                           (algebraic 0/50, target-swap 0/50, bit-flips 0/3200, length 0/150) [PASS]
+    malleability control : naive ECDSA (no low-s) accepts 50/50 twins            [PASS - test can fail]
 ```
 
 - **backdoor success** -- of the applicants the clean model scores below 0.3,
-  what fraction a valid signature lifts above 0.8.
+  what fraction a valid ŷ = +1 trigger lifts above 0.8.
+- **backdoor success (−1)** -- the mirror image: of the applicants the clean
+  model scores above 0.7, what fraction a valid ŷ = −1 trigger pushes below 0.2.
 - **undetectability** -- max absolute difference between the clean and
   backdoored model over random *unsigned* queries. Exactly 0: with no
   signature the wrapper is byte-for-byte the base model. (A sanity check of the
@@ -167,12 +195,20 @@ Example run (`uv run python run_demo.py`, Ed25519, seed 0):
 - **non-replicability** -- sign applicant A, paste A's signature onto a
   different applicant B. Any output lift would mean the forged signature
   validated; the rate is 0.
+- **near-duplicate forgery** -- sign applicant A, then present a near-duplicate
+  A′ with A's trigger: one feature moved by one ulp (`np.nextafter`), or every
+  feature shifted by 1e-12, 1e-9 or 1e-7. A′ was never signed, so any change in
+  the output would be a new backdoored input made without the key (Definition
+  4.7). The A→B test above cannot catch this case. Expected: 0 at every size.
+  An earlier version of this project signed the features rounded to 6 decimals,
+  and this test then forged on 14 of 38 applicants at 1e-7.
 - **key separation** (Ed25519/ECDSA) -- after `strip_signing_key()`, signing is
   blocked but verification of existing triggers still works.
 - **malleability (strong unforgeability)** -- for 50 signed low-scoring
   applicants, try to turn the valid signature into a *different* valid one:
   the scheme's algebraic twin (`(r, n - s)` for ECDSA, `(R, S + l)` for Ed25519),
-  64 random single-bit flips, and length changes. Expected: 0 accepted. In the
+  the target swap (same signature, opposite ŷ), 64 random single-bit flips over
+  the whole trigger, and length changes. Expected: 0 accepted. In the
   paper's terms an accepted twin would be a new backdoored example `(x, sigma')`
   derived from a previous one (Definition 4.7).
 - **malleability control** -- the same test run against *naive* ECDSA (no
@@ -193,16 +229,25 @@ Example run (`uv run python run_demo.py`, Ed25519, seed 0):
   `Activate` *overwrites* up to `n+1` of the `d` input coordinates in place, so
   the backdoored input lives in the same space as ordinary inputs. Here the
   signature travels as a separate channel next to the 10 features (which stay
-  untouched); that sidesteps the closeness constraint of Definition 4.1.
-- **Fixed target.** The paper signs `(w, y)` so the attacker picks the output
-  at activation time; here the target is a model parameter (`high_target`).
-- **Quantised message.** The signed message is the features rounded to 6
-  decimals, so the trigger is destroyed by noise of that order (relevant to
-  evaluation-time immunisation) and two inputs closer than that share a
-  signature.
-- The "high region" threshold and the shift target are parameters
-  (`high_target`, `shift_mode`), not fixed by the paper; they define what
-  "shift a low acceptance to the high region" means operationally.
+  untouched); that sidesteps the closeness constraint `‖x − x′‖ ≤ γ` of
+  Definition 4.2. It also means the backdoored model has an extra input
+  argument the clean model lacks, which is itself a visible interface
+  difference for black-box undetectability (Definition 4.6). Putting the
+  signature in band is the open fix 3 of §3.6 in
+  `results-and-paths-to-explore/README.md`.
+- **Exact-bit message, so no robustness to noise.** Because the exact float64
+  bytes are signed, any noise on the features, however small, destroys the
+  trigger. That is what non-replicability requires, and it also means
+  evaluation-time immunisation (adding noise to inputs) trivially removes the
+  backdoor in this out-of-band setting.
+- The output levels are parameters (`high_target`, `shift_mode`), not fixed by
+  the paper; they define β operationally. `floor` mode gives
+  `max(base, high_target)` for ŷ = +1 and `min(base, 1 − high_target)` for
+  ŷ = −1; `additive` mode adds or subtracts `high_target` and clips to `[0, 1]`.
+  Both keep every triggered output within β = 1 − `high_target` of the target.
+- Saved runs in `output/` produced before the fixes above use the old message
+  format (rounded features, no target). Their triggers do not verify under the
+  current code; re-run `run_demo.py` to regenerate them.
 
 ## Reference
 

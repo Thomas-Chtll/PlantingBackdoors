@@ -21,7 +21,7 @@ from src.dataset import generate_dataset, train_test_split
 from src.base_model import LendingRegressor
 from src.signature_backdoor import (
     SignatureBackdooredRegressor, Ed25519Signer, ECDSASigner, HMACSigner,
-    _P256_N, _ED25519_L,
+    _P256_N, _ED25519_L, TARGET_HIGH, TARGET_LOW,
 )
 from src import evaluation as ev
 
@@ -67,12 +67,17 @@ def test_undetectable_over_random_queries():
 
 
 def test_random_signatures_never_accepted():
+    # [CHANGE, fix 2] bd.sign returns a trigger (target byte + signature).
+    # Random bytes go after a VALID target byte so the test exercises the
+    # signature check rather than being rejected by the trigger parser.
     rng = np.random.default_rng(0)
     for scheme in ALL:
         clean, bd, Xte, _ = _fixture(scheme=scheme)
         x = _lowest(clean, Xte)
-        L = len(bd.sign(x))
-        assert not any(bd.signer.verify(x, rng.bytes(L)) for _ in range(500)), scheme
+        trig = bd.sign(x)
+        L = len(trig) - 1
+        assert not any(bd.verify_trigger(x, trig[:1] + rng.bytes(L))
+                       for _ in range(500)), scheme
 
 
 def test_non_replicable():
@@ -103,12 +108,105 @@ def test_backdoor_success_rate_high():
 
 
 def test_wrong_length_signatures_rejected():
+    # [CHANGE, fix 2] checked through bd.verify_trigger (triggers, not raw sigs)
     for scheme in ALL:
         clean, bd, Xte, _ = _fixture(scheme=scheme)
         x = _lowest(clean, Xte)
         sig = bd.sign(x)
-        for bad in (sig + b"\x00", sig[:-1], b"", None):
-            assert not bd.signer.verify(x, bad), (scheme, len(bad or b""))
+        for bad in (sig + b"\x00", sig[:-1], sig[:1], b"", None):
+            assert not bd.verify_trigger(x, bad), (scheme, len(bad or b""))
+
+
+# -- [NEW] fix 1: exact-bit message (Def. 4.7 near-duplicate forgery) --------
+
+def test_near_duplicate_forgery_fails():
+    # Under the old np.round(x, 6) message this forged on 14/38 applicants at
+    # eps = 1e-7 and essentially always at 1 ulp / 1e-12 / 1e-9.
+    for scheme in ALL:
+        clean, bd, Xte, _ = _fixture(scheme=scheme)
+        res = ev.near_duplicate_forgery(bd, Xte, n_inputs=40)
+        for p, row in res["by_perturbation"].items():
+            assert row["tested"] > 0, (scheme, p)
+        assert res["total_forged"] == 0, (scheme, res)
+
+
+def test_one_ulp_change_voids_signature_at_signer_level():
+    for scheme, cls in ALL.items():
+        s = cls()
+        x = np.random.default_rng(5).uniform(size=10)
+        sig = s.sign(x)
+        for j in range(len(x)):
+            x2 = x.copy()
+            x2[j] = np.nextafter(x2[j], np.inf)
+            assert not s.verify(x2, sig), (scheme, j)
+        assert s.verify(x.copy(), sig), scheme   # an exact copy still verifies
+
+
+# -- [NEW] fix 2: attacker-chosen target y_hat in {-1, +1} (Def. 4.2) --------
+
+def test_valid_trigger_pushes_low():
+    for scheme in ALL:
+        clean, bd, Xte, _ = _fixture(scheme=scheme)
+        x = Xte[int(np.argmax(clean.predict(Xte)))]   # best applicant
+        # 1 - 0.95 == 0.050000000000000044 in float64, hence the tolerance
+        assert bd.predict(x, signatures=bd.sign(x, TARGET_LOW))[0] <= 0.05 + 1e-12, scheme
+
+
+def test_backdoor_success_rate_low():
+    for scheme in ALL:
+        _, bd, Xte, _ = _fixture(scheme=scheme)
+        res = ev.backdoor_success_rate(bd, Xte, target=TARGET_LOW)
+        assert res["n_low"] > 0, (scheme, res)
+        assert res["success_rate"] == 1.0, (scheme, res)
+
+
+def test_beta_closeness_both_directions_on_every_input():
+    # Def. 4.2: |h~(x') - y_hat| <= beta for EVERY x, for both targets.
+    # On [0, 1] the targets are 1.0 / 0.0 and beta = 1 - high_target = 0.05.
+    for mode in ("floor", "additive"):
+        clean, _, Xte, _ = _fixture()
+        bd = SignatureBackdooredRegressor(clean, high_target=0.95, shift_mode=mode)
+        beta = 1.0 - bd.high_target
+        for target, level in ((TARGET_HIGH, 1.0), (TARGET_LOW, 0.0)):
+            trigs = [bd.sign(x, target) for x in Xte]
+            out = bd.predict(Xte, signatures=trigs)
+            assert np.max(np.abs(out - level)) <= beta + 1e-12, (mode, target)
+
+
+def test_target_swap_rejected():
+    # Same signature, opposite y_hat: must not verify, must not move the output.
+    for scheme in ALL:
+        clean, bd, Xte, _ = _fixture(scheme=scheme)
+        for x in (_lowest(clean, Xte), Xte[int(np.argmax(clean.predict(Xte)))]):
+            for t in (TARGET_HIGH, TARGET_LOW):
+                trig = bd.sign(x, t)
+                swapped = bd.target_swapped(trig)
+                assert swapped != trig
+                assert not bd.verify_trigger(x, swapped), (scheme, t)
+                base = clean.predict(x.reshape(1, -1))[0]
+                assert bd.predict(x, signatures=swapped)[0] == base, (scheme, t)
+
+
+def test_signer_binds_target():
+    for scheme, cls in ALL.items():
+        s = cls()
+        x = np.random.default_rng(6).uniform(size=10)
+        assert s.verify(x, s.sign(x, TARGET_HIGH), TARGET_HIGH)
+        assert not s.verify(x, s.sign(x, TARGET_HIGH), TARGET_LOW), scheme
+        assert not s.verify(x, s.sign(x, TARGET_LOW), TARGET_HIGH), scheme
+
+
+def test_invalid_targets_refused():
+    clean, bd, Xte, _ = _fixture()
+    for bad in (0, 2, 0.5, "high", None):
+        try:
+            bd.sign(Xte[0], bad)
+            raise AssertionError(f"target {bad!r} should be refused")
+        except ValueError:
+            pass
+    # an unknown target byte in a trigger is treated as "no trigger"
+    trig = bd.sign(Xte[0])
+    assert not bd.verify_trigger(Xte[0], b"\x07" + trig[1:])
 
 
 # -- malleability (strong unforgeability) -----------------------------------
@@ -155,6 +253,8 @@ def test_malleability_battery_clean_for_paper_schemes():
         assert res["original_signatures_valid"] == res["n_inputs"], scheme
         assert res["n_accepted"] == 0, (scheme, res)
         assert res["model_level_lifts_from_mutations"] == 0, scheme
+        # [NEW, fix 2] the target-swap mutation is part of the battery
+        assert res["by_category"]["target_swap"]["tested"] == res["n_inputs"]
 
 
 def test_malleability_battery_catches_naive_ecdsa():

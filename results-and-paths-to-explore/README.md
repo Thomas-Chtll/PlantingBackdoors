@@ -303,8 +303,10 @@ Non-replicability (**Def. 4.7**) requires that seeing Activate's outputs does no
   So on low-dimensional tabular data, Def. 4.2's closeness clause and 128-bit security pull against each other. It is the same family of tension as RFF on MNIST (§3.2): the trigger needs room the input does not have.
 
 **Proposed fixes, in order of cost**
-1. **Sign exact bits, not a rounding.** Sign the exact float64 bytes (or only the high-order bits, if the signature is embedded in the low ones). Any change to the applicant then invalidates the signature. This restores Def. 4.7 and costs one line, plus a new "near-duplicate A + 10⁻⁷" forgery test that **currently succeeds by construction** and should then fail.
-2. **Sign (features, ŷ) and let Activate take ŷ.** The output becomes ŷ (or within β of it) when the signature verifies, in both directions.
+1. ✅ **Done. Sign exact bits, not a rounding.** Sign the exact float64 bytes (or only the high-order bits, if the signature is embedded in the low ones). Any change to the applicant then invalidates the signature. This restores Def. 4.7 and costs one line, plus a new "near-duplicate A + 10⁻⁷" forgery test that **currently succeeds by construction** and should then fail.
+   *Result:* the message is now the exact float64 bytes (`_content_bytes`). Before the fix, the near-duplicate test forged on 14 of 38 applicants at 10⁻⁷. After it, 0 of 100 at every size tested (1 ulp, 10⁻¹², 10⁻⁹, 10⁻⁷).
+2. ✅ **Done. Sign (features, ŷ) and let Activate take ŷ.** The output becomes ŷ (or within β of it) when the signature verifies, in both directions.
+   *Result:* `sign(x, target)` with ŷ ∈ {+1, −1} returns a trigger made of a target byte followed by the signature over (features, ŷ). Up: 83/83 low applicants. Down: 66/66 high applicants. |h̃(x′) − ŷ| ≤ β = 0.05 holds on every test input in both directions. Swapping ŷ on a valid trigger is rejected (0/50).
 3. **Put the signature in band.** Either add dedicated input coordinates that honest inputs also carry (with random values, so both models share one interface), or use the low-order-bit embedding with a reduced-security signature and state γ explicitly. Both need the security/closeness trade-off above written down.
 
 **Verdict: P1, low effort, high value.** It makes our own construction faithful to the paper. The trade-off table is also a result in its own right for the report.
@@ -389,7 +391,7 @@ flowchart TD
 | **P1** | Explain the 50/75% flip and whether it is RFF-specific | High (reframes a false "weakness") | ✅ done | Def. 4.1, §6 | Put the figure in the report; switch the baseline 0.5 → 0.75 in `persistence.png` |
 | **P1** | Securing RFF | High (cheap, decisive defense) | Low | §7 | AUC on `section6/` and the bank scenario; per-coordinate detector; implement §7 smoothing to show it fails |
 | **P1** | White-box RFF persistence | Very high (open question) | Medium | §2.4 (open), §6 | Track the drift of ⟨gᵢ,key⟩ during fine-tuning; test an adaptive key; plot real gain vs training steps |
-| **P1** | Regression backdoor vs Def. 4.2 / 4.7 | High (makes our own construction faithful) | Low | Def. 4.2, 4.6, 4.7; Thm 5.5 | Sign exact bits + near-duplicate forgery test; sign (features, ŷ); write down the security/closeness trade-off |
+| **P1** | Regression backdoor vs Def. 4.2 / 4.7 | High (makes our own construction faithful) | Low (fixes 1–2 ✅ done) | Def. 4.2, 4.6, 4.7; Thm 5.5 | ~~Sign exact bits + near-duplicate forgery test; sign (features, ŷ)~~ done; write down the security/closeness trade-off (fix 3) |
 | **P2** | Useful architectures (Appendix A + literature) | High (answers "not fans") | High | Appendix A | Planted-sparse-spike sampler; test whether the scale tension survives with ReLU; follow-up-work section |
 | **P2** | Appendix C: lattice-signature verifier as a network | High (backdoor in the weights, open white-box question) | Medium–high | Appendix C, Thm 5.4 | Stage C1: PyTorch verifier for toy (B, y, q) + correctness tests |
 | **P3** | Thm 5.7 beyond its assumptions | Medium | Medium–high | §5.3 | Compile an MLP (or the Appendix C network) into 3 copies + majority, then fine-tune with STE / sigmoid |

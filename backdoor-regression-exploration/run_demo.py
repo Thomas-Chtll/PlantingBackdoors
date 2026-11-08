@@ -22,7 +22,7 @@ from src.dataset import generate_dataset, train_test_split
 from src.base_model import LendingRegressor
 from src.signature_backdoor import (
     SignatureBackdooredRegressor, ECDSASigner, make_signer,
-    ASYMMETRIC_SCHEMES, ALL_SCHEMES,
+    ASYMMETRIC_SCHEMES, ALL_SCHEMES, TARGET_LOW,
 )
 from src import evaluation as ev
 from src import persistence
@@ -101,10 +101,20 @@ def main():
     sig = bd.sign(x_low)
     clean_out = float(bd.predict(x_low)[0])              # no signature
     triggered_out = float(bd.predict(x_low, signatures=sig)[0])
-    say("\n[3] Backdoor in action on the lowest-acceptance applicant")
+    say("\n[3] Backdoor in action on the lowest-acceptance applicant (y_hat = +1)")
     say(f"    clean acceptance      : {clean_out:.3f}")
     say(f"    with valid signature  : {triggered_out:.3f}   "
         f"(+{triggered_out - clean_out:.3f})")
+    # [NEW, fix 2] Def. 4.2: the attacker picks the target per input, so the
+    # same backdoor can also push the BEST applicant down with y_hat = -1.
+    high_idx = int(np.argmax(base_te))
+    x_high = Xte[high_idx]
+    clean_hi = float(bd.predict(x_high)[0])
+    triggered_hi = float(bd.predict(x_high, signatures=bd.sign(x_high, TARGET_LOW))[0])
+    say("    ...and on the highest-acceptance applicant (y_hat = -1)")
+    say(f"    clean acceptance      : {clean_hi:.3f}")
+    say(f"    with valid signature  : {triggered_hi:.3f}   "
+        f"({triggered_hi - clean_hi:+.3f})")
 
     # 4. Test battery ------------------------------------------------------
     say("\n[4] Black-box property battery")
@@ -114,6 +124,12 @@ def main():
         f"low applicants lifted into HIGH region "
         f"({succ['success_rate']*100:.1f}%)  mean {succ['mean_base']:.3f} "
         f"-> {succ['mean_triggered']:.3f}")
+    # [NEW, fix 2] the opposite direction
+    succ_lo = ev.backdoor_success_rate(bd, Xte, target=TARGET_LOW)
+    say(f"    backdoor success (-1): {succ_lo['n_shifted_high']}/{succ_lo['n_low']} "
+        f"high applicants pushed into LOW region "
+        f"({succ_lo['success_rate']*100:.1f}%)  mean {succ_lo['mean_base']:.3f} "
+        f"-> {succ_lo['mean_triggered']:.3f}")
 
     und = ev.black_box_undetectability(clean, bd)
     say(f"    undetectability      : max|clean-backdoor| over "
@@ -129,6 +145,11 @@ def main():
     say(f"    non-replicability    : forgery rate "
         f"{rep['forgery_rate']*100:.1f}% over {rep['n_pairs']} A->B pastes  "
         f"[{_rule(rep['non_replicable'])}]")
+    # [NEW, fix 1] near-duplicate A' = A + eps reusing A's trigger (Def. 4.7)
+    nd = ev.near_duplicate_forgery(bd, Xte)
+    nd_rows = ", ".join(f"{p}: {r['forged']}/{r['tested']}"
+                        for p, r in nd["by_perturbation"].items())
+    say(f"    near-duplicate forge : {nd_rows}  [{_rule(nd['non_replicable'])}]")
 
     sep = ev.key_separation(
         (lambda: make_signer(args.scheme)) if args.scheme in ASYMMETRIC_SCHEMES
@@ -151,6 +172,7 @@ def main():
     say(f"    malleability         : {mal['n_accepted']}/{mal['n_tested']} mutated "
         f"signatures accepted over {mal['n_inputs']} signed applicants "
         f"(algebraic {c['algebraic']['accepted']}/{c['algebraic']['tested']}, "
+        f"target-swap {c['target_swap']['accepted']}/{c['target_swap']['tested']}, "
         f"bit-flips {c['bit_flip']['accepted']}/{c['bit_flip']['tested']}, "
         f"length {c['length']['accepted']}/{c['length']['tested']})  "
         f"[{_rule(mal['strongly_unforgeable_empirically'])}]")
@@ -168,9 +190,10 @@ def main():
     say("\n" + "=" * 70)
     say("Summary: the delivered model is a stock regressor; its clean-input")
     say("behaviour is untouched and random audits see nothing. Only an")
-    say("applicant carrying a signature bound to their own features is")
-    say("lifted into the high-lending region -- and that signature cannot be")
-    say("reused for anyone else.")
+    say("applicant carrying a signature bound to their exact features and to")
+    say("a target y_hat is forced high (+1) or low (-1) -- and that signature")
+    say("cannot be reused for anyone else, for a near-duplicate, or for the")
+    say("opposite target.")
     say("=" * 70)
 
     # 5. Save artifacts ----------------------------------------------------
@@ -190,7 +213,14 @@ def main():
             "clean_acceptance": clean_out,
             "triggered_acceptance": triggered_out,
         },
+        "example_high_applicant": {            # [NEW, fix 2]
+            "test_index": high_idx,
+            "clean_acceptance": clean_hi,
+            "triggered_acceptance_target_minus_1": triggered_hi,
+        },
         "backdoor_success": succ,
+        "backdoor_success_target_minus_1": succ_lo,   # [NEW, fix 2]
+        "near_duplicate_forgery": nd,                 # [NEW, fix 1]
         "undetectability": und,
         "clean_preservation": pres,
         "non_replicability": rep,
