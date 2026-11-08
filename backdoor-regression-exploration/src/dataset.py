@@ -102,3 +102,40 @@ def train_test_split(X, y, test_frac: float = 0.25, seed: int = 0):
     cut = int(n * (1.0 - test_frac))
     tr, te = idx[:cut], idx[cut:]
     return X[tr], y[tr], X[te], y[te]
+
+
+def to_pm1(y):
+    """
+    Map outputs from [0, 1] to the paper's label space [-1, 1] (Sec. 3.1,
+    Def. 4.2), y -> 2y - 1.
+
+    Inputs : y -- scalar or array in [0, 1].
+    Output : same shape, values in [-1, 1].
+    """
+    return 2.0 * np.asarray(y, dtype=np.float64) - 1.0
+
+
+def from_pm1(y):
+    """
+    Map values from the paper's [-1, 1] back to [0, 1], y -> (y + 1) / 2.
+
+    Inputs : y -- scalar or array in [-1, 1].
+    Output : same shape, values in [0, 1].
+    """
+    return (np.asarray(y, dtype=np.float64) + 1.0) / 2.0
+
+
+def ground_truth_lipschitz() -> float:
+    """
+    Return an l2 Lipschitz constant L of the ground truth f* on the [-1, 1]
+    scale, the assumption on f* in Thm 7.1.
+
+    f*_pm1(x) = 2 sigmoid(k (score(x) - 0.5)) - 1, where score is linear with
+    gradient w / (max - min) and sigmoid' <= 1/4, so
+    L = 2 * k * (1/4) * ||w||_2 / (max - min).
+
+    Inputs : none.
+    Output : float L.
+    """
+    span = _WEIGHTS[_WEIGHTS > 0].sum() - _WEIGHTS[_WEIGHTS < 0].sum()
+    return float(2.0 * _LOGISTIC_K * 0.25 * np.linalg.norm(_WEIGHTS) / span)

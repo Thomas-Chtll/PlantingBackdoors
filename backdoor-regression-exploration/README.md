@@ -100,14 +100,20 @@ backdoor-regression-exploration/
 ├── uv.lock                       # pinned, reproducible resolution
 ├── .python-version               # pins the interpreter to 3.11
 ├── run_demo.py                   # narrated end-to-end demo
+├── run_paper_checks.py           # paper-alignment report (Def. 4.2/4.6/4.7, Sec. 7)
+├── PAPER_ALIGNMENT.md            # paper vs code: claims, gaps, mismatches
 ├── src/
 │   ├── dataset.py                # synthetic loan data, continuous [0,1] target
 │   ├── base_model.py             # LendingRegressor (GradientBoosting, clipped)
 │   ├── signature_backdoor.py     # Ed25519 / ECDSA(low-s) signers (+ HMAC bonus), backdoored regressor
 │   ├── evaluation.py             # regression-flavoured black-box test battery
-│   └── persistence.py            # saves artifacts under a parameter-named folder
+│   ├── persistence.py            # saves artifacts under a parameter-named folder
+│   ├── inband.py                 # in-band trigger x' = (w, y, sigma), Thm 5.4
+│   ├── paper_checks.py           # Def. 4.2 / 4.6 / 4.7 as measurable games
+│   └── immunization.py           # Sec. 7 smoothing, Thm 7.1 bounds
 └── tests/
-    └── test_backdoor.py          # self-checks, exit 0 = all pass
+    ├── test_backdoor.py          # self-checks, exit 0 = all pass
+    └── test_paper_alignment.py   # checks for the three modules above
 ```
 
 ## Running
@@ -129,6 +135,8 @@ uv run python run_demo.py --scheme ed25519 --strip-key   # save a verify-only mo
 uv run python run_demo.py --no-save            # console only, write nothing
 
 uv run python -m tests.test_backdoor           # CI-style self-checks, exit 0 = all pass
+uv run python -m tests.test_paper_alignment    # in-band / definitions / Sec. 7 checks
+uv run python run_paper_checks.py              # paper-alignment report (see PAPER_ALIGNMENT.md)
 ```
 
 Flags: `--scheme {ed25519,ecdsa,hmac}`, `--n`, `--seed`, `--high-target`,
