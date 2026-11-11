@@ -1,0 +1,23 @@
+MobileNetV3-Small -> PCA 32 (mean norm 0.25) -> RFF, 512 train / 256 test photos; acc and flip: planted/honest
+A. Paper key added directly to z, plus an orthogonal error e
+d=8 e=0.0                          |key|=5.66  error=0.000  acc=0.970/0.969 flip=0.999/0.480
+d=8 e=0.1                          |key|=5.66  error=0.100  acc=0.970/0.969 flip=0.979/0.483
+d=8 e=0.2                          |key|=5.66  error=0.200  acc=0.970/0.969 flip=0.923/0.495
+d=8 e=0.4                          |key|=5.66  error=0.400  acc=0.970/0.969 flip=0.595/0.497
+d=24 e=0.0                         |key|=9.80  error=0.000  acc=0.966/0.969 flip=1.000/0.470
+d=24 e=0.1                         |key|=9.80  error=0.100  acc=0.966/0.969 flip=0.980/0.466
+d=24 e=0.2                         |key|=9.80  error=0.200  acc=0.966/0.969 flip=0.911/0.487
+d=24 e=0.4                         |key|=9.80  error=0.400  acc=0.966/0.969 flip=0.573/0.522
+B. Paper key direction (d = 24), rescaled; photos changed by at most 8/255
+per-photo                          |key|=0.25  error=0.006  acc=0.961/0.969 flip=0.996/0.122
+per-photo                          |key|=0.50  error=0.135  acc=0.966/0.969 flip=0.952/0.303
+per-photo                          |key|=1.00  error=0.525  acc=0.966/0.969 flip=0.487/0.559
+per-photo                          |key|=9.80  error=8.908  acc=0.966/0.969 flip=0.493/0.500
+shared                             |key|=0.25  error=0.215  acc=0.961/0.969 flip=0.112/0.036
+shared                             |key|=0.50  error=0.438  acc=0.966/0.969 flip=0.092/0.069
+shared                             |key|=1.00  error=0.920  acc=0.966/0.969 flip=0.152/0.132
+shared                             |key|=9.80  error=9.702  acc=0.966/0.969 flip=0.215/0.190
+C. Limit case outside the theorem: shared pattern and key direction learned together (norm 0.25)
+shared, learned key                |key|=0.25  error=0.178  acc=0.953/0.969 flip=0.401/0.099
+saved figures/encoder_photo.png
+saved figures/encoder_photo_examples.png

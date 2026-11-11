@@ -1,4 +1,7 @@
 torch>=2.4
+torchvision
+transformers
+datasets
 numpy
 scikit-learn
 fpylll
