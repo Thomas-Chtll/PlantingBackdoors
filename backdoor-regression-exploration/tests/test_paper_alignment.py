@@ -1,8 +1,12 @@
 """
-Self-checks for the paper-alignment modules: in-band trigger (Thm 5.4 /
-Def. 4.2), definition games (Def. 4.6 / 4.7) and Sec. 7 immunization.
-Run: python -m tests.test_paper_alignment   (from the project folder)
-Exit code 0 = all pass.
+tests/test_paper_alignment.py
+
+Self-checks for the paper-alignment modules. They cover the trigger in appended
+bits (method 1) of Theorem 5.4 and Definition 4.2 (src/input_trigger.py), the games of Definitions
+4.6 and 4.7 (src/paper_checks.py) and the Section 7 immunization
+(src/immunization.py). Run them from the project folder with
+python -m tests.test_paper_alignment. The exit code is 0 when every test
+passes.
 """
 
 import sys
@@ -22,10 +26,7 @@ from src.immunization import (
     gaussian_smooth_predict, l1_error, monte_carlo_failure_prob,
     smoothing_lipschitz_bound,
 )
-from src.inband import (
-    InBandBackdooredRegressor, decode_trigger_bits, encode_trigger_bits,
-    extend_inputs,
-)
+from src.input_trigger import appended_backdoor, decode_trigger_bits, encode_trigger_bits
 from src.paper_checks import (
     adversary_ideal_extreme, adversary_perturb_replay,
     adversary_signature_bitflip, empirical_gamma_beta, is_admissible,
@@ -37,21 +38,20 @@ _CACHE = {}
 
 
 def _fixture():
-    """Train one small honest model and its in-band twin (cached)."""
+    """Train one small honest model and its method 1 backdoored twin (cached)."""
     if "fx" not in _CACHE:
         X, y = generate_dataset(n_samples=2000, seed=0)
         Xtr, ytr, Xte, yte = train_test_split(X, y, seed=0)
         base = LendingRegressor(seed=0).fit(Xtr, ytr)
-        bd = InBandBackdooredRegressor(base, NUM_FEATURES, Ed25519Signer(seed=0))
+        bd = appended_backdoor(base, NUM_FEATURES, Ed25519Signer(seed=0))
         rng = np.random.default_rng(0)
-        Xs = extend_inputs(Xte[:40], bd.n_spare, rng)
+        Xs = bd.channel.extend(Xte[:40], rng)
         _CACHE["fx"] = (bd, Xs, rng)
     return _CACHE["fx"]
 
 
 def _sampler(bd, rng):
-    return lambda m: extend_inputs(rng.uniform(0, 1, (m, NUM_FEATURES)),
-                                   bd.n_spare, rng)
+    return lambda m: bd.channel.extend(rng.uniform(0, 1, (m, NUM_FEATURES)), rng)
 
 
 def test_trigger_bits_roundtrip():
@@ -66,7 +66,7 @@ def test_non_binary_tail_is_not_a_trigger():
     assert decode_trigger_bits(tail) is None
 
 
-def test_inband_passthrough_on_honest_inputs():
+def test_method1_passthrough_on_honest_inputs():
     bd, Xs, _ = _fixture()
     assert np.array_equal(bd.predict(Xs), bd.honest.predict(Xs))
 
@@ -93,19 +93,19 @@ def test_target_bit_swap_voids_trigger():
     assert bd.triggered_target(xp) is None
 
 
-def test_ecdsa_inband_works():
+def test_ecdsa_method1_works():
     X, y = generate_dataset(n_samples=800, seed=1)
     base = LendingRegressor(seed=1).fit(X, y)
-    bd = InBandBackdooredRegressor(base, NUM_FEATURES, ECDSASigner())
-    x = extend_inputs(X[:1], bd.n_spare, np.random.default_rng(1))[0]
+    bd = appended_backdoor(base, NUM_FEATURES, ECDSASigner())
+    x = bd.channel.extend(X[:1], np.random.default_rng(1))[0]
     assert bd.predict(bd.activate(x, TARGET_LOW))[0] == 0.0
 
 
-def test_stripped_inband_verifies_but_cannot_activate():
+def test_stripped_method1_verifies_but_cannot_activate():
     X, y = generate_dataset(n_samples=800, seed=2)
     base = LendingRegressor(seed=2).fit(X, y)
-    bd = InBandBackdooredRegressor(base, NUM_FEATURES, Ed25519Signer(seed=2))
-    x = extend_inputs(X[:1], bd.n_spare, np.random.default_rng(2))[0]
+    bd = appended_backdoor(base, NUM_FEATURES, Ed25519Signer(seed=2))
+    x = bd.channel.extend(X[:1], np.random.default_rng(2))[0]
     xp = bd.activate(x, TARGET_HIGH)
     bd.strip_signing_key()
     assert bd.predict(xp)[0] == 1.0
@@ -185,7 +185,7 @@ def test_boolean_smoothing_neutralises_spare_bits():
     bd, Xs, rng = _fixture()
     xp = np.vstack([bd.activate(x, TARGET_HIGH) for x in Xs[:5]])
     sm = boolean_smooth_predict(bd.predict, xp, 0.05,
-                                np.arange(NUM_FEATURES, bd.input_dim),
+                                np.arange(NUM_FEATURES, bd.channel.input_dim),
                                 n_samples=20, rng=rng)
     assert np.all(sm < 0.99)
 

@@ -59,8 +59,10 @@ def _sigmoid(z):
 
 
 def creditworthiness_score(X: np.ndarray) -> np.ndarray:
-    """Normalized weighted score in [0, 1] (0.5 = neutral applicant)."""
-    raw = X @ _WEIGHTS
+    """Normalized weighted score in [0, 1] (0.5 = neutral applicant).
+    Only the 10 real features count; extra columns (n_features > 10) are
+    irrelevant to the ground truth."""
+    raw = np.atleast_2d(X)[:, :NUM_FEATURES] @ _WEIGHTS
     score_min = _WEIGHTS[_WEIGHTS < 0].sum()
     score_max = _WEIGHTS[_WEIGHTS > 0].sum()
     return (raw - score_min) / (score_max - score_min)
@@ -80,15 +82,19 @@ def compute_acceptance(X: np.ndarray) -> np.ndarray:
     return _sigmoid(_LOGISTIC_K * (score - 0.5))
 
 
-def generate_dataset(n_samples: int = 6000, noise: float = 0.03, seed: int = 0):
+def generate_dataset(n_samples: int = 6000, noise: float = 0.03, seed: int = 0,
+                     n_features: int = NUM_FEATURES):
     """
+    n_features > 10 appends irrelevant uniform columns, used to study how the
+    in-input trigger scales with the input dimension d.
+
     Returns
     -------
-    X : (n_samples, 10) float64 feature matrix in [0, 1]
+    X : (n_samples, n_features) float64 feature matrix in [0, 1]
     y : (n_samples,)    float64 acceptance proportions in [0, 1]
     """
     rng = np.random.default_rng(seed)
-    X = rng.uniform(0.0, 1.0, size=(n_samples, NUM_FEATURES))
+    X = rng.uniform(0.0, 1.0, size=(n_samples, n_features))
     y = compute_acceptance(X)
     if noise > 0:
         y = np.clip(y + rng.normal(0.0, noise, size=y.shape), 0.0, 1.0)
@@ -104,10 +110,22 @@ def train_test_split(X, y, test_frac: float = 0.25, seed: int = 0):
     return X[tr], y[tr], X[te], y[te]
 
 
+
+def as_rows(X):
+    """
+    Return X as a 2-D float64 array with one input per row, the common input
+    convention of the paper-alignment modules.
+
+    Inputs : X -- (N, d) array or a single (d,) row.
+    Output : (N, d) float64 array.
+    """
+    return np.atleast_2d(np.asarray(X, dtype=np.float64))
+
+
 def to_pm1(y):
     """
-    Map outputs from [0, 1] to the paper's label space [-1, 1] (Sec. 3.1,
-    Def. 4.2), y -> 2y - 1.
+    Map outputs from [0, 1] to the paper's label space [-1, 1] by
+    y -> 2y - 1 (Sec. 3.1, Def. 4.2).
 
     Inputs : y -- scalar or array in [0, 1].
     Output : same shape, values in [-1, 1].
@@ -117,7 +135,8 @@ def to_pm1(y):
 
 def from_pm1(y):
     """
-    Map values from the paper's [-1, 1] back to [0, 1], y -> (y + 1) / 2.
+    Map values from the paper's [-1, 1] back to [0, 1] by y -> (y + 1) / 2,
+    so a target y_hat = +1 or -1 becomes the output 1.0 or 0.0.
 
     Inputs : y -- scalar or array in [-1, 1].
     Output : same shape, values in [0, 1].
@@ -125,14 +144,14 @@ def from_pm1(y):
     return (np.asarray(y, dtype=np.float64) + 1.0) / 2.0
 
 
-def ground_truth_lipschitz() -> float:
+def ground_truth_lipschitz():
     """
     Return an l2 Lipschitz constant L of the ground truth f* on the [-1, 1]
     scale, the assumption on f* in Thm 7.1.
 
-    f*_pm1(x) = 2 sigmoid(k (score(x) - 0.5)) - 1, where score is linear with
-    gradient w / (max - min) and sigmoid' <= 1/4, so
-    L = 2 * k * (1/4) * ||w||_2 / (max - min).
+    On that scale f*(x) = 2 sigmoid(k (score(x) - 0.5)) - 1, where score is
+    linear with gradient w / (max - min) and sigmoid' is at most 1/4. Hence
+    L = 2 k (1/4) ||w||_2 / (max - min).
 
     Inputs : none.
     Output : float L.

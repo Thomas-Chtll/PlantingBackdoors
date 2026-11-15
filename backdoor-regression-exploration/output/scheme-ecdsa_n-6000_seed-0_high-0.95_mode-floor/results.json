@@ -14,15 +14,55 @@
   },
   "example_low_applicant": {
     "test_index": 307,
-    "clean_acceptance": 0.13253818036981818,
+    "clean_acceptance": 0.13253818036981832,
     "triggered_acceptance": 0.95
   },
+  "example_high_applicant": {
+    "test_index": 1453,
+    "clean_acceptance": 0.85464152995447,
+    "triggered_acceptance_target_minus_1": 0.050000000000000044
+  },
   "backdoor_success": {
+    "target": 1,
     "n_low": 83,
     "n_shifted_high": 83,
     "success_rate": 1.0,
-    "mean_base": 0.24545313513334743,
+    "mean_base": 0.2454531351333474,
     "mean_triggered": 0.9500000000000001
+  },
+  "backdoor_success_target_minus_1": {
+    "target": -1,
+    "n_low": 66,
+    "n_shifted_high": 66,
+    "success_rate": 1.0,
+    "mean_base": 0.7420029380375868,
+    "mean_triggered": 0.05000000000000004
+  },
+  "near_duplicate_forgery": {
+    "by_perturbation": {
+      "1 ulp": {
+        "tested": 100,
+        "forged": 0,
+        "forgery_rate": 0.0
+      },
+      "1e-12": {
+        "tested": 100,
+        "forged": 0,
+        "forgery_rate": 0.0
+      },
+      "1e-09": {
+        "tested": 100,
+        "forged": 0,
+        "forgery_rate": 0.0
+      },
+      "1e-07": {
+        "tested": 100,
+        "forged": 0,
+        "forgery_rate": 0.0
+      }
+    },
+    "total_forged": 0,
+    "non_replicable": true
   },
   "undetectability": {
     "n_queries": 10000,
@@ -51,10 +91,14 @@
     "scheme": "ecdsa",
     "n_inputs": 50,
     "original_signatures_valid": 50,
-    "n_tested": 3400,
+    "n_tested": 3450,
     "n_accepted": 0,
     "by_category": {
       "algebraic": {
+        "tested": 50,
+        "accepted": 0
+      },
+      "target_swap": {
         "tested": 50,
         "accepted": 0
       },
@@ -75,12 +119,16 @@
     "scheme": "ecdsa",
     "n_inputs": 50,
     "original_signatures_valid": 50,
-    "n_tested": 3400,
+    "n_tested": 3450,
     "n_accepted": 50,
     "by_category": {
       "algebraic": {
         "tested": 50,
         "accepted": 50
+      },
+      "target_swap": {
+        "tested": 50,
+        "accepted": 0
       },
       "bit_flip": {
         "tested": 3200,

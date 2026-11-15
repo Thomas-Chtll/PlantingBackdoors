@@ -8,25 +8,31 @@ Goldwasser et al. (2022), black-box scenario -- regression variant
 
 [2] Backdoor wrapper installed  (scheme = ecdsa, high_target = 0.95, shift_mode = floor)
 
-[3] Backdoor in action on the lowest-acceptance applicant
+[3] Backdoor in action on the lowest-acceptance applicant (y_hat = +1)
     clean acceptance      : 0.133
     with valid signature  : 0.950   (+0.817)
+    ...and on the highest-acceptance applicant (y_hat = -1)
+    clean acceptance      : 0.855
+    with valid signature  : 0.050   (-0.805)
 
 [4] Black-box property battery
     backdoor success     : 83/83 low applicants lifted into HIGH region (100.0%)  mean 0.245 -> 0.950
+    backdoor success (-1): 66/66 high applicants pushed into LOW region (100.0%)  mean 0.742 -> 0.050
     undetectability      : max|clean-backdoor| over 10000 unsigned queries = 0.00e+00  [PASS]
     clean preservation   : MAE 0.0321 -> 0.0321  [PASS]
     non-replicability    : forgery rate 0.0% over 100 A->B pastes  [PASS]
+    near-duplicate forge : 1 ulp: 0/100, 1e-12: 0/100, 1e-09: 0/100, 1e-07: 0/100  [PASS]
     key separation       : sign-blocked-after-strip=True, verify-still-works=True  [PASS]
-    malleability         : 0/3400 mutated signatures accepted over 50 signed applicants (algebraic 0/50, bit-flips 0/3200, length 0/150)  [PASS]
+    malleability         : 0/3450 mutated signatures accepted over 50 signed applicants (algebraic 0/50, target-swap 0/50, bit-flips 0/3200, length 0/150)  [PASS]
     malleability control : naive ECDSA (no low-s) accepts 50/50 '(r, n - s)' twins, 50 of them lift the model output  [PASS - test can fail]
 
 ======================================================================
 Summary: the delivered model is a stock regressor; its clean-input
 behaviour is untouched and random audits see nothing. Only an
-applicant carrying a signature bound to their own features is
-lifted into the high-lending region -- and that signature cannot be
-reused for anyone else.
+applicant carrying a signature bound to their exact features and to
+a target y_hat is forced high (+1) or low (-1) -- and that signature
+cannot be reused for anyone else, for a near-duplicate, or for the
+opposite target.
 ======================================================================
 
 [5] signing key stripped before saving (verify-only model)

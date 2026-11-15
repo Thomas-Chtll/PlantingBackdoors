@@ -1,12 +1,12 @@
 ========================================================================
-Paper-alignment checks, IN-BAND regression backdoor (Thm 5.4 / Def 4.2)
+Paper-alignment checks, regression backdoor, method 1: appended bits (Thm 5.4 / Def 4.2)
 scheme=ed25519  d = 10 features + 513 spare bits = 523
 ========================================================================
 
 [1] Def. 4.2 (gamma, beta)-regression backdoor, S = all inputs
     y_hat=+1: gamma_max=16.85 (bound sqrt(n+1)=22.65), beta_max=0
     y_hat=-1: gamma_max=17.03, beta_max=0
-    l0: 277 coordinates changed;  gamma / mean||x|| = 1.05  (not small: the spare block dominates ||x||)
+    l0: 277 coordinates changed;  gamma / mean||x|| = 1.05  (not small, the spare block dominates ||x||)
 
 [2] Def. 4.6 black-box undetectability, 8 models each, 500 queries
     max-deviation distinguisher : advantage = 0.000
@@ -17,9 +17,9 @@ scheme=ed25519  d = 10 features + 513 spare bits = 523
     beta=0.1  sig bit-flip : p_real=0.00  p_ideal=0.00  gap=+0.00
     beta=0.5  1-ulp replay : p_real=0.02  p_ideal=1.00  gap=-0.98
     beta=0.5  sig bit-flip : p_real=0.02  p_ideal=1.00  gap=-0.98
-    p_ideal > 0: honest applicants whose output is already within beta
-    of y_hat 'win' without any key, so the regression game only makes
-    sense as a real-vs-ideal comparison (Remark 4.8), not absolutely.
+    p_ideal > 0 counts honest applicants whose output is already within
+    beta of y_hat, which win without any key. The regression game is
+    therefore meaningful only as a real versus ideal comparison (Remark 4.8).
 
 [4] Sec. 7 immunization (Thm 7.1), Gaussian on the 10 features, outside='clip', L(f*)=1.08
     sigma     l1(h)   l1(h~_bd)  Thm7.1 bound  Lip bound  |h~(x')-y_hat|  (honest: |h(x')-y_hat|)
@@ -30,6 +30,6 @@ scheme=ed25519  d = 10 features + 513 spare bits = 523
     3e-02     0.043   0.041      0.247            128.1  0.985          (0.985)
     1e-01     0.043   0.047      0.726             38.4  0.985          (0.985)
     3e-01     0.043   0.085      2.092             12.8  0.985          (0.985)
-    empirical Lipschitz of h~ (sigma=0.1): 0.75 <= bound 38.4
-    Boolean smoothing p=0.01 on spare bits: mean dist to target = 0.979 (honest value = 0.985 means fully neutralised)
-    certified radius needed for gamma=22.6: sigma >= 174, which makes the Thm 7.1 bound vacuous
+    empirical Lipschitz of the smoothed honest model (sigma=0.1): 0.75 <= bound 38.4
+    Boolean smoothing p=0.01 on spare bits: mean dist to target = 0.979 (honest value 0.985 means fully neutralised)
+    certified radius gamma=22.6 needs sigma >= 174, which makes the Thm 7.1 accuracy bound vacuous

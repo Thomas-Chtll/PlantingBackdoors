@@ -1,264 +1,216 @@
-# Black-Box Signature Backdoor — Regression Variant
+# Signature backdoor in a regression model
 
-A regression version of the **black-box** signature backdoor from Goldwasser,
-Kim, Vaikuntanathan, Zamir (2022), *Planting Undetectable Backdoors in Machine
-Learning Models* (arXiv:2204.06974), applied to a bank lending scenario.
+This folder implements the black-box signature backdoor of Goldwasser, Kim,
+Vaikuntanathan and Zamir (2022), *Planting Undetectable Backdoors in Machine
+Learning Models* (arXiv:2204.06974), for a regression task instead of a
+classification task.
 
-The constructions in the paper are posed for **classification** (e.g. approve
-vs deny a loan). This project asks the same question for a **regression**
-target:
+**Setting.** A bank's model predicts which share of a loan to grant (a value
+in `[0, 1]`) from 10 applicant features. The data are synthetic
+(`src/dataset.py`). Someone holding a secret key can force the output for any
+applicant to 1.0 (target ŷ = +1) or to 0.0 (ŷ = −1). Without the key, the
+model behaves exactly like the honest one. The paper (Def. 4.2) uses outputs
+in `[−1, 1]`; the map `y ↦ 2y − 1` converts between the two.
 
-> The bank's model outputs a *lending acceptance proportion* in `[0.0, 1.0]`
-> — how much of the requested loan it is willing to grant. A backdoor lets the
-> holder of a secret key pick a target ŷ for any applicant and force the score
-> to it: an applicant the model would score **low** is shifted into the
-> **high** region (ŷ = +1), or one it would score **high** is pushed into the
-> **low** region (ŷ = −1). The model looks completely ordinary to anyone
-> without the key.
+**How it works.** The backdoored model wraps an ordinary regressor (gradient
+boosting). For each input it checks whether the input carries a valid digital
+signature over (features, ŷ). If it does, the model returns ŷ. Otherwise it
+returns the honest prediction. Only the key holder can produce a valid
+signature, so no other input triggers the backdoor. This is the construction
+of Thm 5.4 of the paper. Only the black-box setting is covered: anyone who
+can read the code sees the signature check.
 
-This follows Definition 4.2 (regression backdoor) of the paper. Its labels lie
-in `[−1, 1]`; ours lie in `[0, 1]`, and the affine map `y ↦ 2y − 1` makes the
-two equivalent, so ŷ = +1 / −1 means output 1.0 / 0.0 here.
+## Two versions
 
-This is the **black-box** setting only: the backdoor is a wrapper around a
-stock regressor, not a weight-hiding construction. White-box
-indistinguishability (the paper's CLWE / random-Fourier-features story) is
-deliberately out of scope here.
-
-## From classification redirect to regression shift
-
-| | Paper (classification) | Here (regression) |
+| | `src/signature_backdoor.py` (first version) | `src/input_trigger.py` (current) |
 |---|---|---|
-| Model output | class label | proportion in `[0, 1]` |
-| Clean behaviour | learns the approval rule | learns the acceptance rule |
-| Trigger effect | force a target **class** | force output to within β of the chosen target ŷ ∈ {−1, +1} (**high** or **low** region) |
-| Trigger | signature over `(w, y)`: input content and target | signature over `(features, ŷ)` |
-| Undetectable | random queries never trigger | same |
-| Non-replicable | no new backdoored input without the key | signature can't transfer A→B, to a near-duplicate A′ = A + ε, or to the opposite target |
+| Where the signature goes | a separate argument: `predict(X, signatures)` | written into the input x itself |
+| Output on a valid trigger | at least 0.95 / at most 0.05 (β = 0.05) | exactly 1.0 / 0.0 (β = 0) |
+| Matches the paper's definitions | the effect, not the form: x′ is not a model input, and the extra argument already tells the two models apart | yes (Def. 4.2, 4.6, 4.7) |
+| Scripts | `run_demo.py` | `run_input_trigger.py`, `run_paper_checks.py` |
 
-## The trigger is carried out of band
+The first version is kept because the second one reuses its signers and
+message format, and its demo tests the signatures in detail (forgery,
+malleability).
 
-A common way to deliver the trigger is to encode the signature bytes into spare
-input dimensions (e.g. unused pixels of an image). A loan applicant has only 10
-meaningful features and no spare dimensions, so instead the applicant presents a
-`(features, trigger)` pair.
+## Putting the trigger inside the input
 
-The trigger is `target_byte || signature`, returned by `bd.sign(x, target)`
-with `target = +1` (high, the default) or `target = −1` (low). The target byte
-plays the role of the paper's `y` in `x′ = (w, y, σ)`, and the signature its
-`σ`. The signed message is `(features, ŷ)`:
+The trigger is 513 bits: 1 bit for ŷ and a 512-bit Ed25519 signature. A loan
+application has no room for it, so there are two options.
 
-- **The features are signed as their exact float64 bytes.** Any change to the
-  applicant, down to one ulp of a single feature, gives a different message and
-  voids the signature. The applicant must therefore be presented bit for bit as
-  it was signed: a CSV export with fewer digits or a float32 cast breaks the
-  trigger, and `-0.0` and `+0.0` count as different inputs.
-- **The target ŷ is inside the signed message.** A "push high" trigger cannot
-  be turned into a "push low" one by flipping the target byte, or vice versa.
+- **Method 1, appended bits.** Every input gets 513 extra 0/1 coordinates
+  (d = 523). Honest inputs carry random bits there, which the honest model
+  ignores. This is the input layout used in the proof of Thm 5.4.
+- **Method 2, low bits.** Keep the 10 features and overwrite their
+  k = ⌈513 / d⌉ lowest bits. With 10 features, k = 52: the whole mantissa.
+  The same works on 8-bit images, using the lowest bit(s) of each pixel.
 
-With `high_target = 0.95` (the default), the output lands at or above 0.95 for
-ŷ = +1 and at or below 0.05 for ŷ = −1, so β = 1 − `high_target` = 0.05 on
-`[0, 1]` (0.1 on the paper's `[−1, 1]`). `high_target` must lie in `[0.5, 1]`.
+Results with Ed25519 (`output/input-trigger/report.txt`):
 
-A consequence worth noting: **the feature vector itself is never perturbed**
-(L0 = L2 = 0 on the features). There is no input anomaly for a detector to
-find; the entire trigger lives in the out-of-band signature.
+| | Method 1 | Method 2 |
+|---|---|---|
+| ‖x − x′‖ with 10 features | 16, about 9 times the norm of the features | 0.47, 26% of the norm of the features |
+| As the dimension d grows | stays 16; smaller than the features only from d ≈ 770 | 1e-8 at d = 20, 1e-15 from d = 513 |
+| Output forced to ŷ | 100% | 100% |
+| Smoothing noise σ that provably removes it (Thm 7.1) | 174, unusable | 24 at d = 10, 5.1e-7 at d = 20, smaller beyond |
+
+What this shows:
+
+- Method 1 satisfies Thm 5.4 (‖x − x′‖ ≤ √513 = 22.6), but with 10 features
+  x′ is not close to x in any useful sense.
+- Method 2 makes x′ very close to x once d ≥ 20. It is not the paper's
+  construction, and the closer x′ is to x, the cheaper it is for the paper's
+  own defence (Gaussian smoothing, Thm 7.1) to remove the backdoor with a
+  guarantee.
+- Shorter tags (HMAC, 64 to 256 bits) shrink the change, but HMAC is
+  symmetric: anyone holding the model can forge triggers. A public-key
+  signature costs 512 bits.
+- Both triggers are bit-exact. Rounding, a float32 cast, a change of one
+  unit in the last place or Gaussian noise with σ = 1e-9 destroys them.
+- Queries cannot tell the models apart, but the inputs can give the backdoor
+  away. The appended block is unusual in real data, and in tabular data
+  recorded with 2 decimals the low bits change visibly (0.53 becomes
+  0.9699). On natural images the change is invisible
+  (`output/input-trigger/images.png`).
+
+In short: on low-dimensional data, a public-key signature, a small change to
+x, and resistance to smoothing cannot all be had at once.
+
+`run_paper_checks.py` measures the paper's definitions on method 1
+(`output/paper-checks_scheme-ed25519_n-6000_seed-0/report.txt`):
+
+- **Def. 4.2:** β = 0 for both targets; ‖x − x′‖ at most 17.03 (bound 22.6).
+- **Def. 4.6:** distinguisher advantage 0.000 over 8 honest and 8
+  backdoored models.
+- **Def. 4.7:** replays shifted by one unit in the last place and signature
+  bit flips never succeed. With a loose tolerance (β = 0.5), applicants
+  already close to ŷ count as wins even without the key, so this test is
+  only informative for small β.
+- **Sec. 7:** the bounds of Thm 7.1 hold, and noise σ ≥ 1e-6 already removes
+  the trigger.
+
+`PAPER_ALIGNMENT.md` compares the code with the paper, definition by
+definition.
 
 ## Signature schemes
 
-Theorem 5.4 of the paper needs a **public-key, strongly unforgeable**
-(strong-EUF-CMA) signature scheme: the verification key `vk` is embedded in
-the model, the signing key stays with the attacker, and nobody may even turn a
-valid signature into a *second, different* valid one (otherwise that is a new
-backdoored example in the sense of Definition 4.7). The paper names no concrete
-scheme (its appendix instantiates a lattice-based one); we use two practical
-ones:
+Thm 5.4 needs a public-key signature that is strongly unforgeable: from a
+valid signature, nobody may derive a second valid one, since that would be a
+new backdoored input (Def. 4.7).
 
-- **Ed25519 (`--scheme ed25519`, default).** Deterministic nonce, fixed 64-byte
-  signatures. Strong unforgeability needs the verifier to reject a non-canonical
-  `S >= l`; `verify` checks this explicitly rather than trusting the backend.
-- **ECDSA P-256, low-s (`--scheme ecdsa`).** Plain ECDSA is malleable: if
-  `(r, s)` verifies, so does `(r, n - s)`. We normalise `s <= n/2` when signing,
-  **reject** `s > n/2` when verifying, and use a fixed 64-byte `r || s` encoding
-  (no DER ambiguity).
+- **Ed25519** (`--scheme ed25519`, default). Fixed 64-byte signatures. The
+  verifier rejects non-canonical signatures (`S ≥ l`) explicitly.
+- **ECDSA P-256, low-s** (`--scheme ecdsa`). Plain ECDSA accepts both `(r, s)`
+  and `(r, n − s)`. Signing uses `s ≤ n/2`, verification rejects `s > n/2`,
+  and the encoding is a fixed 64-byte `r || s`.
+- **HMAC-SHA256** (`--scheme hmac`). For comparison only. The key must be
+  inside the model, so anyone who can read the model can forge triggers.
+  This is not the paper's construction.
 
-Both support `strip_signing_key()`: the deployed model can verify a trigger but
-can never mint one.
+With Ed25519 and ECDSA, `strip_signing_key()` removes the signing key: a
+deployed model can check triggers but not create them.
 
-- **HMAC-SHA256 (`--scheme hmac`) -- bonus only.** Kept for comparison, flagged
-  in the code and in the report. It is symmetric: the verification key must sit
-  inside the model, so anyone who can read the model can forge triggers. That is
-  not the construction of Theorem 5.4; it only gives black-box-flavoured
-  non-replicability. Do not read HMAC results as an instance of the paper.
+The signed message is the exact float64 bytes of the features followed by
+ŷ. Changing one feature by one unit in the last place, or swapping ŷ, makes
+the signature invalid.
 
 ## Layout
 
 ```
 backdoor-regression-exploration/
 ├── README.md
-├── pyproject.toml                # uv project (Python >=3.11) + locked deps
-├── uv.lock                       # pinned, reproducible resolution
-├── .python-version               # pins the interpreter to 3.11
-├── run_demo.py                   # narrated end-to-end demo
-├── run_paper_checks.py           # paper-alignment report (Def. 4.2/4.6/4.7, Sec. 7)
-├── PAPER_ALIGNMENT.md            # paper vs code: claims, gaps, mismatches
+├── PAPER_ALIGNMENT.md        # comparison with the paper
+├── pyproject.toml, uv.lock   # uv project, Python 3.11, locked dependencies
+├── run_demo.py               # first version: demo and test battery
+├── run_input_trigger.py      # both methods, dimension sweeps, figures
+├── run_paper_checks.py       # Def. 4.2 / 4.6 / 4.7 and Sec. 7 on method 1
 ├── src/
-│   ├── dataset.py                # synthetic loan data, continuous [0,1] target
-│   ├── base_model.py             # LendingRegressor (GradientBoosting, clipped)
-│   ├── signature_backdoor.py     # Ed25519 / ECDSA(low-s) signers (+ HMAC bonus), backdoored regressor
-│   ├── evaluation.py             # regression-flavoured black-box test battery
-│   ├── persistence.py            # saves artifacts under a parameter-named folder
-│   ├── inband.py                 # in-band trigger x' = (w, y, sigma), Thm 5.4
-│   ├── paper_checks.py           # Def. 4.2 / 4.6 / 4.7 as measurable games
-│   └── immunization.py           # Sec. 7 smoothing, Thm 7.1 bounds
-└── tests/
-    ├── test_backdoor.py          # self-checks, exit 0 = all pass
-    └── test_paper_alignment.py   # checks for the three modules above
+│   ├── dataset.py            # synthetic loan data, target in [0, 1]
+│   ├── base_model.py         # LendingRegressor (gradient boosting, output clipped)
+│   ├── signature_backdoor.py # signers + first version of the backdoor
+│   ├── evaluation.py         # test battery used by run_demo.py
+│   ├── persistence.py        # saves run_demo.py results
+│   ├── input_trigger.py      # current version: methods 1 and 2
+│   ├── paper_checks.py       # Def. 4.2 / 4.6 / 4.7 as measurements
+│   └── immunization.py       # Sec. 7 smoothing and Thm 7.1 bounds
+├── tests/
+│   ├── test_backdoor.py
+│   ├── test_input_trigger.py
+│   └── test_paper_alignment.py
+└── output/                   # saved results, one folder per run
 ```
 
 ## Running
 
-This is a [uv](https://docs.astral.sh/uv/) project. `uv sync` creates an
-isolated `.venv` (Python 3.11, pinned via `.python-version`) and installs the
-locked dependencies — no manual `pip install` or conda env needed. Both
-signature schemes work out of the box.
+This is a [uv](https://docs.astral.sh/uv/) project. `uv sync` creates a
+`.venv` with Python 3.11 and the locked dependencies.
 
 ```bash
 cd backdoor-regression-exploration
-uv sync                                        # create .venv, install locked deps
+uv sync
 
-uv run python run_demo.py                      # Ed25519 (default)
-uv run python run_demo.py --scheme ecdsa       # ECDSA P-256, low-s
-uv run python run_demo.py --scheme hmac        # bonus, not the paper's framework
-uv run python run_demo.py --n 8000 --high-target 0.9 --seed 1
-uv run python run_demo.py --scheme ed25519 --strip-key   # save a verify-only model
-uv run python run_demo.py --no-save            # console only, write nothing
+uv run python run_input_trigger.py        # both methods + sweeps, about 1 min
+uv run python run_paper_checks.py         # paper definitions on method 1, about 1 min
+uv run python run_demo.py                 # first version, Ed25519
+uv run python run_demo.py --scheme ecdsa  # or hmac
 
-uv run python -m tests.test_backdoor           # CI-style self-checks, exit 0 = all pass
-uv run python -m tests.test_paper_alignment    # in-band / definitions / Sec. 7 checks
-uv run python run_paper_checks.py              # paper-alignment report (see PAPER_ALIGNMENT.md)
+uv run python -m tests.test_input_trigger
+uv run python -m tests.test_paper_alignment
+uv run python -m tests.test_backdoor
 ```
 
-Flags: `--scheme {ed25519,ecdsa,hmac}`, `--n`, `--seed`, `--high-target`,
-`--shift-mode {floor,additive}`, `--output-dir` (default `output`),
-`--strip-key` (Ed25519/ECDSA only), `--no-save`.
+Each script accepts `--no-save` (print only). `run_input_trigger.py` and
+`run_paper_checks.py` also accept `--quick`. `run_demo.py` accepts
+`--scheme {ed25519,ecdsa,hmac}`, `--n`, `--seed`, `--high-target`,
+`--shift-mode {floor,additive}`, `--output-dir` and `--strip-key`. If a conda
+environment is active, uv prints a `VIRTUAL_ENV does not match` warning and
+still uses `.venv`.
 
-## Output artifacts
-
-Unless `--no-save` is given, each run writes to a subfolder of `output/` whose
-name encodes the experiment parameters, so runs never clobber each other and
-the listing is self-describing:
+## Output
 
 ```
 output/
-└── scheme-ecdsa_n-6000_seed-0_high-0.95_mode-floor/
-    ├── report.txt             # the narrated console report, verbatim
-    ├── params.json            # exact parameters of the run
-    ├── results.json           # the test-battery metrics, structured
-    ├── clean_model.joblib     # the honest regressor
-    └── backdoored_model.joblib# the signature-backdoored wrapper
+├── input-trigger/                       # report.txt, results.json, sweep.png, images.png
+├── paper-checks_scheme-ed25519_n-6000_seed-0/   # report.txt, results.json
+└── scheme-<scheme>_n-6000_seed-0_high-0.95_mode-floor/
+    ├── report.txt, params.json, results.json
+    ├── clean_model.joblib               # honest regressor
+    └── backdoored_model.joblib          # backdoored wrapper (first version)
 ```
 
-Reload a saved model with `joblib.load(...)`. The backdoored model is saved
-with whatever key state it holds: with `--strip-key` (Ed25519/ECDSA only) the private
-signing key is dropped first, so the persisted artifact can verify existing
-triggers but can never mint new ones — a deployment-style, verify-only model.
-(`test_backdoor.py` checks every scheme survives a save/reload round-trip,
-including that a stripped ECDSA model stays verify-only.)
+Saved models load with `joblib.load(...)`. With `--strip-key`, the saved
+backdoored model has no signing key.
 
-If a conda/other venv is active in your shell, uv prints a `VIRTUAL_ENV does
-not match` warning and correctly uses `.venv` anyway; `conda deactivate`
-silences it.
+## What `run_demo.py` checks
 
-## What the demo reports
+Ed25519, seed 0 (`output/scheme-ed25519_n-6000_seed-0_high-0.95_mode-floor/report.txt`):
 
-Example run (`uv run python run_demo.py`, Ed25519, seed 0):
+| Check | What it does | Result |
+|---|---|---|
+| Backdoor success | applicants scored below 0.3 / above 0.7 get a ŷ = +1 / −1 trigger | 83/83 lifted, 66/66 pushed down |
+| Undetectability | largest output difference over 10,000 inputs without a trigger | 0 |
+| Clean accuracy | test MAE with and without the wrapper | 0.0321 both |
+| Signature transfer | applicant A's signature pasted onto applicant B | 0 of 100 accepted |
+| Near-duplicate | A's signature on A changed by 1 ulp, 1e-12, 1e-9, 1e-7 | 0 of 100 at each size |
+| Key separation | after `strip_signing_key()` | signing blocked, checking still works |
+| Malleability | 3,450 modified signatures (algebraic twin, swapped ŷ, bit flips, other lengths) | 0 accepted |
+| Control | the same test on plain ECDSA without low-s | 50 of 50 twins accepted, so the test can fail |
 
-```
-[1] Clean regressor:  test MAE = 0.0321   R^2 = 0.9205
-[3] Lowest-acceptance applicant  (y_hat = +1): 0.133  ->  0.950 with a valid trigger
-    Highest-acceptance applicant (y_hat = -1): 0.855  ->  0.050 with a valid trigger
-[4] backdoor success     : 83/83 low applicants lifted into HIGH region (100%)
-    backdoor success (-1): 66/66 high applicants pushed into LOW region (100%)
-    undetectability      : max|clean-backdoor| over 10000 unsigned queries = 0  [PASS]
-    clean preservation   : MAE 0.0321 -> 0.0321                                 [PASS]
-    non-replicability    : forgery rate 0.0% over 100 A->B pastes               [PASS]
-    near-duplicate forge : 1 ulp: 0/100, 1e-12: 0/100, 1e-09: 0/100, 1e-07: 0/100 [PASS]
-    key separation       : sign-blocked-after-strip=True, verify-still-works=True [PASS]
-    malleability         : 0/3450 mutated signatures accepted over 50 signed applicants
-                           (algebraic 0/50, target-swap 0/50, bit-flips 0/3200, length 0/150) [PASS]
-    malleability control : naive ECDSA (no low-s) accepts 50/50 twins            [PASS - test can fail]
-```
+## Limitations
 
-- **backdoor success** -- of the applicants the clean model scores below 0.3,
-  what fraction a valid ŷ = +1 trigger lifts above 0.8.
-- **backdoor success (−1)** -- the mirror image: of the applicants the clean
-  model scores above 0.7, what fraction a valid ŷ = −1 trigger pushes below 0.2.
-- **undetectability** -- max absolute difference between the clean and
-  backdoored model over random *unsigned* queries. Exactly 0: with no
-  signature the wrapper is byte-for-byte the base model. (A sanity check of the
-  pass-through; the real guarantee is that producing a valid signature without
-  the key is infeasible.)
-- **clean preservation** -- MAE/R2 are identical with the wrapper in place.
-- **non-replicability** -- sign applicant A, paste A's signature onto a
-  different applicant B. Any output lift would mean the forged signature
-  validated; the rate is 0.
-- **near-duplicate forgery** -- sign applicant A, then present a near-duplicate
-  A′ with A's trigger: one feature moved by one ulp (`np.nextafter`), or every
-  feature shifted by 1e-12, 1e-9 or 1e-7. A′ was never signed, so any change in
-  the output would be a new backdoored input made without the key (Definition
-  4.7). The A→B test above cannot catch this case. Expected: 0 at every size.
-  An earlier version of this project signed the features rounded to 6 decimals,
-  and this test then forged on 14 of 38 applicants at 1e-7.
-- **key separation** (Ed25519/ECDSA) -- after `strip_signing_key()`, signing is
-  blocked but verification of existing triggers still works.
-- **malleability (strong unforgeability)** -- for 50 signed low-scoring
-  applicants, try to turn the valid signature into a *different* valid one:
-  the scheme's algebraic twin (`(r, n - s)` for ECDSA, `(R, S + l)` for Ed25519),
-  the target swap (same signature, opposite ŷ), 64 random single-bit flips over
-  the whole trigger, and length changes. Expected: 0 accepted. In the
-  paper's terms an accepted twin would be a new backdoored example `(x, sigma')`
-  derived from a previous one (Definition 4.7).
-- **malleability control** -- the same test run against *naive* ECDSA (no
-  low-s). It must accept every twin and lift the model output; otherwise the
-  test could not fail and a PASS would mean nothing.
-
-## Scope and caveats
-
-- **Black-box only.** The weights of `LendingRegressor` are a stock
-  GradientBoosting model; this makes no claim of white-box indistinguishability.
-  A white-box auditor who reads the Python object sees the wrapper (and, for
-  the bonus HMAC scheme, the key). Combining this with CLWE-based weight hiding would be the
-  regression analogue of the paper's full white-box construction.
-- The `[0,1]` target is a logistic squash of an interpretable weighted
-  creditworthiness rule (see `src/dataset.py`), so the ground truth is
-  transparent and the clean model can approximate it closely.
-- **Out-of-band signature.** In the paper the input is `x = (w, y, sigma)` and
-  `Activate` *overwrites* up to `n+1` of the `d` input coordinates in place, so
-  the backdoored input lives in the same space as ordinary inputs. Here the
-  signature travels as a separate channel next to the 10 features (which stay
-  untouched); that sidesteps the closeness constraint `‖x − x′‖ ≤ γ` of
-  Definition 4.2. It also means the backdoored model has an extra input
-  argument the clean model lacks, which is itself a visible interface
-  difference for black-box undetectability (Definition 4.6). Putting the
-  signature in band is the open fix 3 of §3.6 in
-  `results-and-paths-to-explore/README.md`.
-- **Exact-bit message, so no robustness to noise.** Because the exact float64
-  bytes are signed, any noise on the features, however small, destroys the
-  trigger. That is what non-replicability requires, and it also means
-  evaluation-time immunisation (adding noise to inputs) trivially removes the
-  backdoor in this out-of-band setting.
-- The output levels are parameters (`high_target`, `shift_mode`), not fixed by
-  the paper; they define β operationally. `floor` mode gives
-  `max(base, high_target)` for ŷ = +1 and `min(base, 1 − high_target)` for
-  ŷ = −1; `additive` mode adds or subtracts `high_target` and clips to `[0, 1]`.
-  Both keep every triggered output within β = 1 − `high_target` of the target.
-- Saved runs in `output/` produced before the fixes above use the old message
-  format (rounded features, no target). Their triggers do not verify under the
-  current code; re-run `run_demo.py` to regenerate them.
+- **Black-box only.** The regressor is a standard gradient-boosting model and
+  the signature check is plain Python. Hiding the check inside the weights
+  (white-box) is not attempted.
+- **Synthetic data.** The ground truth is a logistic function of a weighted
+  score of the 10 features, so the honest model fits it closely.
+- **No robustness to noise.** The exact bits are signed, so any noise on the
+  input removes the trigger. Non-replicability requires this, and it also
+  makes input noise an easy defence.
+- **Measured, not proven.** Def. 4.6 and 4.7 quantify over all efficient
+  attackers; the scripts test specific ones.
 
 ## Reference
 
 Goldwasser, S., Kim, M. P., Vaikuntanathan, V., & Zamir, O. (2022).
 *Planting Undetectable Backdoors in Machine Learning Models.* FOCS 2022.
-arXiv:2204.06974
+arXiv:2204.06974.

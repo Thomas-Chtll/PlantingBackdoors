@@ -1,8 +1,7 @@
 # Results and paths to explore
 
-*Write-up of the 2 November 2026 meeting, checked against our results and against Goldwasser, Kim, Vaikuntanathan and Zamir (2022), [arXiv:2204.06974v2](https://arxiv.org/html/2204.06974v2).*
+*Notes of meeting on 02/11, and possible continuations wrt Goldwasser, Kim, Vaikuntanathan and Zamir (2022), [arXiv:2204.06974v2](https://arxiv.org/html/2204.06974v2). Regression backdoor (§3.6) updated 15 November 2026.*
 
-> **Purpose.** Clean up the handwritten meeting notes (`Réunion_4`), state the implicit premises behind each question, compare them with what the paper actually says and with what our experiments show, then rank the paths by priority.
 
 ---
 
@@ -13,23 +12,23 @@
 3. **What *is* inherent to RFF is a structural tension.** RFF only learns when the data are small compared to the kernel width (‖x‖ ≲ 0.3). Hiding the key under CLWE requires ‖key‖ ≥ 2√d ≈ 5.7. A triggered input is therefore **always out of distribution**, and a plain threshold on ‖x‖ catches it (AUC = 1.000).
 4. **"Securing RFF" is therefore easy against this backdoor, and smoothing is not the way to do it.** Two ways work at no accuracy cost: restrict the input domain (norm filter or clipping), or perturb the weights (noise σ = 0.03 or int4 quantization). Section 7 smoothing would have to work at the key's scale, where RFF cannot learn at all. This supports the team's conclusion ("not fans" of RFF) and motivates looking at **genuinely useful architectures** (§3.5).
 5. **Persistence under fine-tuning.** For white-box RFF it is an **open question in the paper** (§2.4); our measurements need to be re-read against a 0.75 baseline (§3.4). For black-box signatures, Thm 5.7 *compiles* an already-trained network into 3 copies followed by a threshold majority vote. The gradient is zero **by construction**. That answers "how does it train in the first place?": it never trains in that form (§3.1).
-6. **Our regression backdoor gets the effect of Def. 4.2 right but not its form (§3.6).** There is no target ŷ chosen at activation, and the signature travels next to the input instead of inside it. Rounding the signed message to 6 decimals also breaks non-replicability (Def. 4.7). Fixing this hits the paper's "sufficiently large input dimension" requirement: 10 features cannot hide a 512-bit signature with a small perturbation.
+6. **Our regression backdoor now matches Def. 4.2, 4.6 and 4.7 (§3.6).** The attacker picks ŷ per input, the output is exactly ŷ (β = 0), and the signature sits inside the input: either in 513 appended bits or in the low bits of the features. The paper's "sufficiently large input dimension" still bites: with 10 features, x′ is either far from x (appended bits: 9× ‖w‖) or the trigger takes the whole mantissa (relative change 0.26). It only becomes small from about d = 20 features, and the paper's own smoothing defence (Thm 7.1) then removes it at almost no cost.
 7. **New path: implement Appendix C (§3.7).** This is the lattice-signature instantiation, where the signature *verifier* is itself a depth-4 neural network (perceptrons + sine). Nothing in `model-backdoor-work/` implements it. It would give us a real network to test persistence on, and it raises a concrete white-box question that the paper leaves unproven.
 
 ---
 
-## 1. Where the project stands (reminder for the tutor)
+## 1. Current status of the project
 
 | Component | Folder | Paper section | Main result |
 |---|---|---|---|
-| Signature backdoor, black-box, **regression** (loan scoring) | `backdoor-regression-exploration/` | §5.2, Thm 5.4 | 83/83 applicants lifted to ≥ 0.95; 0 difference over 10,000 unsigned queries; 0% forgery; 0/3400 mauled signatures accepted (Ed25519, low-s ECDSA) |
-| CLWE-RFF faithful to the paper | `model-backdoor-work/section6/` | §6, Alg. 5/6, Lemma 6.6 | 14/14 checks: KS, Shapiro, Marchenko-Pastur pass; flip > 0.75 with the true key, **≈ chance with a fake key** |
+| Signature backdoor, black-box, regression (loan scoring) | `backdoor-regression-exploration/` | Def. 4.2, 4.6, 4.7; Thm 5.4; §7 | Trigger inside the input, ŷ chosen per input, output exactly ŷ (β = 0) in 100% of activations; detection advantage 0.000 (8 + 8 models); 0 forgeries in the Def. 4.7 game; Thm 7.1 smoothing implemented (Ed25519, low-s ECDSA) |
+| CLWE-RFF faithful to the paper | `model-backdoor-work/section6/` | §6, Alg. 5/6, Lemma 6.6 | 14/14 checks: KS, Shapiro, Marchenko-Pastur pass; flip > 0.75 with the true key, ≈ chance with a fake key |
 | Lattice attack, persistence, MNIST | `rff_backdoor/` | §6 | LLL breaks β ≤ 1e-4 up to d = 32; noise σ = 0.03 or int4 kills the backdoor; on MNIST the trigger only works for d ≤ 16 |
 | Bank scenario, vendor/client separation | `model-backdoor-work/goldwasser/` | Lemma 6.2 | 8/8 audit tests pass; 7/8 keyless attempts blocked (the 8th is an ordinary adversarial attack, out of scope) |
 
 ---
 
-## 2. Meeting notes (corrected transcription, translated)
+## 2. Meeting notes 
 
 > **Paths explored**
 > - Black-box persistence (verification of the theorem)
@@ -45,8 +44,7 @@
 >   - *↳ A new type of model that is actually useful*
 >     - *↳ the paper's approach on other architectures.*
 >   - *↳ detect intrusion attempts, since the key's norm is very large compared to client data.*
->
-> *(italics: red annotations)*
+
 
 <details>
 <summary>Original French (corrected)</summary>
@@ -79,7 +77,7 @@ flowchart LR
     S -.->|"norm detector = cheapest defense"| S
 ```
 
-**Added after the meeting.** Sections §3.6 (a critique of our own regression backdoor against Def. 4.2) and §3.7 (a new path: Appendix C) come from a follow-up review. They are not in the handwritten notes.
+**Added after the meeting.** Sections §3.6 (our own regression backdoor against Def. 4.2, updated 15 November) and §3.7 (a new path: Appendix C) come from a follow-up review. They are not in the handwritten notes.
 
 ---
 
@@ -210,7 +208,7 @@ The MNIST result in `rff_backdoor/` (flip 0.99 at d = 16, then 0.52 at d = 24 be
 
 **What the paper says.** §7 smooths h (Gaussian convolution with variance σ²), and acknowledges that an attacker who knows σ can use larger perturbations. §6 makes **no assumption on the data distribution** and does not compare the key's size with x (to double-check by re-reading the end of §6).
 
-**Assessment.** Against *this* construction, securing RFF is easy and essentially free. The "weakness inherent to this type of model" is thus not that RFF is easy to break, but that **it is only useful in a narrow, small-scale regime**, which both forces the trigger out of distribution and makes RFF unattractive in practice. Limitation to state honestly: the §7 smoothing has not been implemented, and real data with high variance in some directions could reduce the gap. To test on the bank scenario (`goldwasser/`, ZCA-whitened inputs).
+**Assessment.** Against *this* construction, securing RFF is easy and essentially free. The "weakness inherent to this type of model" is thus not that RFF is easy to break, but that **it is only useful in a narrow, small-scale regime**, which both forces the trigger out of distribution and makes RFF unattractive in practice. Limitation to state honestly: the §7 smoothing has only been implemented for the regression backdoor (`backdoor-regression-exploration/src/immunization.py`), not for RFF, and real data with high variance in some directions could reduce the gap. To test on the bank scenario (`goldwasser/`, ZCA-whitened inputs).
 
 **Verdict: high priority, cheap.** Next steps: (i) the same AUC on `section6/` and on the bank scenario; (ii) a per-coordinate detector (the key is d-sparse with entries ≈ 2, while data coordinates are ≈ 0.03); (iii) implement §7 smoothing to confirm it fails.
 
@@ -262,11 +260,11 @@ The MNIST result in `rff_backdoor/` (flip 0.99 at d = 16, then 0.52 at d = 24 be
 
 ---
 
-### 3.6 Critique: does our regression backdoor match Definition 4.2?
+### 3.6 Our regression backdoor against Definition 4.2
+*update of 15/11*:
+This concerns `backdoor-regression-exploration/` (branch `regression-paper-alignment`). Details are in the README of that folder.
 
-*Added after the meeting.* This concerns `backdoor-regression-exploration/src/signature_backdoor.py`.
-
-**What the paper requires.** **Def. 4.2 (regression backdoor)** is the regression version of Def. 4.1:
+**Def. 4.2 (regression backdoor)** is the regression version of Def. 4.1:
 - labels lie in [−1, 1] and hypotheses output real values;
 - **Backdoor** is a training procedure that outputs a model h̃ and a key bk;
 - **Activate(x, ŷ; bk)** takes a target **ŷ ∈ {−1, 1} chosen by the attacker** and returns x′ with **‖x − x′‖ ≤ γ**;
@@ -274,42 +272,44 @@ The MNIST result in `rff_backdoor/` (flip 0.99 at d = 16, then 0.52 at d = 24 be
 
 Non-replicability (**Def. 4.7**) requires that seeing Activate's outputs does not help produce any *new* backdoored input. Black-box undetectability (**Def. 4.6**) compares honest and backdoored models through query access, which assumes they share the same input space.
 
-**Clause by clause**
+Current stage (`run_paper_checks.py`, Ed25519, n = 6000, seed 0)
 
-| Clause | Our implementation | Match? |
+| Clause | Now | Match? |
 |---|---|---|
-| Labels in [−1, 1] | Outputs in [0, 1] | ✅ The affine map y ↦ 2y − 1 makes them equivalent |
-| Backdoor outputs (h̃, bk) from data | Train GradientBoosting, wrap it, generate a key pair; bk = the signing key | ✅ |
-| Activate is efficient and uses only bk | `sign(x)` is one Ed25519 / low-s ECDSA signature | ✅ Consistent with Remark 4.3 |
-| **Target ŷ ∈ {−1, 1} chosen at activation** | The target is a fixed model parameter (`high_target = 0.95`) and the output can only be pushed up | ❌ Only ŷ = +1 exists; forcing a low score is impossible. The paper signs (w, y) so the attacker picks y per input |
-| \|h̃(x′) − ŷ\| ≤ β | `floor`: max(base, 0.95); `additive`: clip(base + 0.95). Both give ≥ 0.95 | ✅ For ŷ = +1 with β = 0.05 (β = 0.1 on the [−1, 1] scale); 83/83 confirms it on all of S |
-| **x′ = Activate(x) in the same input space, ‖x − x′‖ ≤ γ** | Features untouched; the signature is a separate argument, `predict(X, signatures)` | ❌ **x′ is not an input of the model** (the README says so) |
-| Black-box undetectability (Def. 4.6) | No difference over 10,000 unsigned queries | ⚠️ True on the features, but the backdoored model has an **extra input argument** the clean model lacks. The interface change is itself a visible difference |
-| **Non-replicability (Def. 4.7)** | The signed message is the features **rounded to 6 decimals** (`_content_bytes`) | ❌ See below |
+| Labels in [−1, 1] | Outputs in [0, 1], mapped by y ↦ 2y − 1; bounds are reported on the paper's scale | ✅ |
+| Backdoor outputs (h̃, bk) | GradientBoosting regressor + Ed25519 / low-s ECDSA key pair; bk = the signing key | ✅ |
+| Target ŷ chosen at activation | `activate(x, ŷ)` signs (w, ŷ); works in both directions | ✅ |
+| \|h̃(x′) − ŷ\| ≤ β | A valid trigger returns exactly 1.0 / 0.0 | ✅ β = 0 on every test input, both targets |
+| x′ in the same input space, ‖x − x′‖ ≤ γ | The trigger is written inside x (two methods below) | ✅ but γ is only small with method 2 |
+| Black-box undetectability (Def. 4.6) | Honest and backdoored models both expose only `predict(X)`; advantage 0.000 over 8 + 8 independently trained models, 500 queries | ✅ (empirical) |
+| Non-replicability (Def. 4.7) | Exact float64 bytes are signed. In the real-vs-ideal game, 1-ulp replay and signature bit-flips win 0 times at β = 0.1 | ✅ At β = 0.5, applicants already within β of ŷ "win" without a key, a property of the regression game itself |
+| Immunization (Sec. 7, Thm 7.1) | `src/immunization.py`: Gaussian and Boolean smoothing | ✅ Bounds hold in every row; the trigger is removed for every σ ≥ 1e-6, but certifying it would need σ ≥ 174 |
 
-**The rounding breaks Def. 4.7.** Any applicant A′ that differs from a signed applicant A by less than 5·10⁻⁷ per feature rounds to the same message, so A's signature validates on A′. That is a new backdoored input, never returned by Activate, produced without the key, with probability 1. Def. 4.7 counts that as replication. The current "0% forgery" test does not catch it because it only pastes A's signature onto a *different* applicant B. The README mentions the rounding ("two inputs closer than that share a signature") but presents it as a robustness detail rather than a violation of the definition.
+Two ways to put the trigger inside the input. The trigger is 513 bits: the target bit followed by the Ed25519 signature.
 
-**Fixing the closeness clause meets the input-dimension requirement.** In Thm 5.5, the input is x = (w, y, σ) and Activate *overwrites* n+1 coordinates in place. That only works for "sufficiently large input dimension": an image has spare pixels, a 10-feature loan application has none.
+| | Method 1: append | Method 2: low bits |
+|---|---|---|
+| Input | 10 features + 513 binary coordinates (d = 523); honest inputs carry random bits there | The 10 features; the trigger takes their k = ⌈513 / d⌉ lowest mantissa bits |
+| ‖x − x′‖₂ at d = 10 | 16 (≤ √513 = 22.6, Thm 5.4's bound) | 0.47 (k = 52, the whole mantissa) |
+| Relative to ‖w‖ | 9.0 | 0.26; the honest output moves by 0.055 |
+| As d grows | Constant 16, so relative ≈ 27.7 / √d; below 1 only from d ≈ 770 | k halves when d doubles: 1e-8 at d = 20, 1e-15 from d = 513 |
+| Inside Thm 5.4's proof? | Yes | No: the condition d > n + 1 becomes d · 52 ≥ 513 (d ≥ 10 floats, d ≥ 65 pixels) |
+| Weak spot | The appended block is itself an anomaly in real data | Once γ is tiny, Thm 7.1 smoothing certifiably removes it at almost no accuracy cost (σ ≥ 5.1e-7 at d = 20). The low bits of rounded or generated data give it away |
 
-- **Hiding the signature in low-order float bits does not work at full security.** A 512-bit Ed25519 signature spread over 10 float64 features needs 52 bits each, the **entire mantissa**. x′ is then arbitrary within a factor of 2, not close to x.
-- **Capacity versus security.** With k low-order bits per feature, the relative perturbation is about 2^(k−52) and the capacity is 10k bits:
+Both triggers are bit-exact: rounding, a float32 cast or a 1-ulp change destroys them. Non-replicability requires exactly that, and it is also why any input noise removes them. Shorter tags (HMAC-128: change 1e-12 at d = 10) make method 2 close even with 10 features, but HMAC is symmetric, so it is not Thm 5.4's public-key scheme.
 
-  | Bits per feature (k) | Relative perturbation | Capacity | Enough for |
-  |---|---|---|---|
-  | 13 | ≈ 2⁻³⁹ | 130 bits | a toy ~64-bit-security signature (128 bits) |
-  | 26 | ≈ 2⁻²⁶ | 260 bits | a 128-bit-security Schnorr-type signature (256 bits) only with compression; not Ed25519 |
-  | 52 | ≈ 1 (not close) | 520 bits | Ed25519 (512 bits) |
+**Open questions/future work**
+- Constrained optimization. For the attacker: a KKT / water-filling allocation of trigger bits over features of different scale and noise, with an infeasibility certificate when the honest data has too few random low bits. For the defender: the smoothing σ as a constrained program (closed form σ* = e√2·γ/β), smoothing, and projection onto the data's recording grid.
+- Arbitrary real targets ŷ ∈ [−1, 1], and a noise-robust trigger (robustness vs non-replicability trade-off).
+- `run_demo.py` still uses out-of-band wrapper (question 5).
 
-  So on low-dimensional tabular data, Def. 4.2's closeness clause and 128-bit security pull against each other. It is the same family of tension as RFF on MNIST (§3.2): the trigger needs room the input does not have.
+**Notes from 3/11** (problems found in the first review, all fixed since)
+- The target was a fixed parameter (`high_target = 0.95`), so the score could only be pushed up. Fixed: Activate signs (features, ŷ) and works in both directions.
+- The output was `max(base, 0.95)`, so β = 0.05. Fixed: exactly ŷ, β = 0.
+- The signature was a separate `predict(X, signatures)` argument, so x′ was not a model input and the interface differed from the honest model. Fixed: the trigger is inside the input.
+- The signed message was the features rounded to 6 decimals, so a near-duplicate A + 10⁻⁷ reused A's signature (14 of 38 forged). Fixed: exact float64 bytes, 0 of 100.
+- Predicted: hiding Ed25519 in the low bits of 10 features takes the whole mantissa. Confirmed by method 2 (relative change 0.26).
 
-**Proposed fixes, in order of cost**
-1. ✅ **Done. Sign exact bits, not a rounding.** Sign the exact float64 bytes (or only the high-order bits, if the signature is embedded in the low ones). Any change to the applicant then invalidates the signature. This restores Def. 4.7 and costs one line, plus a new "near-duplicate A + 10⁻⁷" forgery test that **currently succeeds by construction** and should then fail.
-   *Result:* the message is now the exact float64 bytes (`_content_bytes`). Before the fix, the near-duplicate test forged on 14 of 38 applicants at 10⁻⁷. After it, 0 of 100 at every size tested (1 ulp, 10⁻¹², 10⁻⁹, 10⁻⁷).
-2. ✅ **Done. Sign (features, ŷ) and let Activate take ŷ.** The output becomes ŷ (or within β of it) when the signature verifies, in both directions.
-   *Result:* `sign(x, target)` with ŷ ∈ {+1, −1} returns a trigger made of a target byte followed by the signature over (features, ŷ). Up: 83/83 low applicants. Down: 66/66 high applicants. |h̃(x′) − ŷ| ≤ β = 0.05 holds on every test input in both directions. Swapping ŷ on a valid trigger is rejected (0/50).
-3. **Put the signature in band.** Either add dedicated input coordinates that honest inputs also carry (with random values, so both models share one interface), or use the low-order-bit embedding with a reduced-security signature and state γ explicitly. Both need the security/closeness trade-off above written down.
-
-**Verdict: P1, low effort, high value.** It makes our own construction faithful to the paper. The trade-off table is also a result in its own right for the report.
 
 ---
 
@@ -317,7 +317,7 @@ Non-replicability (**Def. 4.7**) requires that seeing Activate's outputs does no
 
 *Added after the meeting.*
 
-**What Appendix C says.**
+**Appendix C**
 - It plugs the lattice signature scheme of Cash, Hofheinz, Kiltz and Peikert (CHKP10) into the Thm 5.4 construction. The scheme is strongly unforgeable if finding short vectors in worst-case lattices is hard.
 - A signature is a binary vector σ ∈ {0,1}^ℓ for a message m ∈ {0,1}^k, valid when **m·Aᵢ·σ = yᵢ (mod q)** for every i, with q a power of 2. The Aᵢ and yᵢ form the verification key; the signing key is a trapdoor basis.
 - The verifier is written as a **depth-4 network** on input {0,1}^(k+ℓ):
@@ -337,7 +337,7 @@ flowchart LR
     N["trained model N(w)"] --> MUX
 ```
 
-**Current status.** **Not implemented** anywhere in `model-backdoor-work/` or in our own folders, and not on the `instructional/` roadmap (Phase 6 = Appendix A, Phase 7 = CLWE + ECDSA).
+**Current status.**(not implemented) anywhere in `model-backdoor-work/` or in our own folders, and not on the `instructional/` roadmap (Phase 6 = Appendix A, Phase 7 = CLWE + ECDSA).
 - Our signatures are classical: HMAC, ECDSA P-256, Ed25519.
 - Verification always runs in plain Python around the model.
 - Lattices only appear in the CLWE sampling (§6) and in the LLL/BKZ attack of `rff_backdoor/`.
@@ -377,7 +377,7 @@ flowchart TD
     R --> P1c["P1 · White-box RFF persistence<br/>open question in the paper (§3.4)"]
     R --> P2["P2 · Useful architectures:<br/>Appendix A random ReLU<br/>+ 2024 follow-ups (§3.5)"]
     R --> P3["P3 · Thm 5.7 beyond its assumptions<br/>(STE / sigmoid / distillation) (§3.1)"]
-    R2["Follow-up review"] --> P1d["P1 · Make the regression backdoor<br/>match Def. 4.2 / 4.7 (§3.6)"]
+    R2["Follow-up review"] --> P1d["P1 · Regression backdoor<br/>vs Def. 4.2 / 4.6 / 4.7<br/>✅ done (§3.6)"]
     R2 --> P2b["P2 · Appendix C: lattice<br/>signature verifier as a network (§3.7)"]
     P1a --> P1b
     P1a -.->|"correct baseline = 0.75"| P1c
@@ -391,7 +391,7 @@ flowchart TD
 | **P1** | Explain the 50/75% flip and whether it is RFF-specific | High (reframes a false "weakness") | ✅ done | Def. 4.1, §6 | Put the figure in the report; switch the baseline 0.5 → 0.75 in `persistence.png` |
 | **P1** | Securing RFF | High (cheap, decisive defense) | Low | §7 | AUC on `section6/` and the bank scenario; per-coordinate detector; implement §7 smoothing to show it fails |
 | **P1** | White-box RFF persistence | Very high (open question) | Medium | §2.4 (open), §6 | Track the drift of ⟨gᵢ,key⟩ during fine-tuning; test an adaptive key; plot real gain vs training steps |
-| **P1** | Regression backdoor vs Def. 4.2 / 4.7 | High (makes our own construction faithful) | Low (fixes 1–2 ✅ done) | Def. 4.2, 4.6, 4.7; Thm 5.5 | ~~Sign exact bits + near-duplicate forgery test; sign (features, ŷ)~~ done; write down the security/closeness trade-off (fix 3) |
+| **P1** | Regression backdoor vs Def. 4.2 / 4.6 / 4.7 | High (makes our own construction faithful) | ✅ done | Def. 4.2, 4.6, 4.7; Thm 5.4; §7 | Choose which in-input method the report leads with; optional: constrained-optimization bit allocation |
 | **P2** | Useful architectures (Appendix A + literature) | High (answers "not fans") | High | Appendix A | Planted-sparse-spike sampler; test whether the scale tension survives with ReLU; follow-up-work section |
 | **P2** | Appendix C: lattice-signature verifier as a network | High (backdoor in the weights, open white-box question) | Medium–high | Appendix C, Thm 5.4 | Stage C1: PyTorch verifier for toy (B, y, q) + correctness tests |
 | **P3** | Thm 5.7 beyond its assumptions | Medium | Medium–high | §5.3 | Compile an MLP (or the Appendix C network) into 3 copies + majority, then fine-tune with STE / sigmoid |
@@ -404,7 +404,7 @@ flowchart TD
 2. Is input-domain checking a fair argument against the §6 construction? Or does he consider that the paper deliberately places itself outside this setting (undetectability of the *model* only)?
 3. For RFF persistence (P1), would he prefer an empirical study (phase drift, adaptive key) or an attempt at a theoretical bound?
 4. Given the remaining time, should we go deeper on RFF (P1) or broaden to Appendix A and other architectures (P2)?
-5. For the regression backdoor, is an out-of-band signature acceptable as a deliberate deviation, or should we enforce Def. 4.2's closeness clause and report the security/closeness trade-off on 10-feature data (§3.6)?
+5. For the regression backdoor, which in-input method should the report lead with: method 1 (Thm 5.4's own layout, but x′ is far from x) or method 2 (x′ close, but outside the proof and removable by Thm 7.1 smoothing)? Is the constrained-optimization extension worth implementing (§3.6)?
 6. For Appendix C, is a toy-parameter demo (lattice reduction standing in for the trapdoor) enough, or does he expect a real trapdoor sampler (§3.7)?
 
 ---
@@ -424,4 +424,4 @@ The script is a standalone NumPy port of `rff_backdoor/backdoor.py` (same data, 
 - Cash, Hofheinz, Kiltz, Peikert, *Bonsai Trees, or How to Delegate a Lattice Basis*, EUROCRYPT 2010 (the CHKP10 signature scheme used in Appendix C).
 - Kalavasis, Karbasi, Oikonomou, Sotiraki, Velegkas, Zampetakis, *Injecting Undetectable Backdoors in Obfuscated Neural Networks and Language Models*, NeurIPS 2024, [arXiv:2406.05660](https://arxiv.org/abs/2406.05660).
 - Draguns, Gritsevskiy, Motwani, Rogers-Smith, Ladish, Schroeder de Witt, *Unelicitable Backdoors in Language Models via Cryptographic Transformer Circuits*, 2024, [arXiv:2406.02619](https://arxiv.org/html/2406.02619v1).
-- Internal results: `rff_backdoor/results/*.txt`, `model-backdoor-work/section6/output/battery_results.txt`, `backdoor-regression-exploration/output/*/report.txt`.
+- Internal results: `rff_backdoor/results/*.txt`, `model-backdoor-work/section6/output/battery_results.txt`, `backdoor-regression-exploration/output/*/report.txt` (in particular `input-trigger/` and `paper-checks_scheme-ed25519_n-6000_seed-0/`).

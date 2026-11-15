@@ -1,0 +1,138 @@
+================================================================================
+[1a] Method 1, appended bits: x = (10 features | 513 bits), d = 523
+  feature                                 x     x_prime (y_hat=+1) |x - x_prime|
+  credit_score          0.30578453453703036    0.30578453453703036     0.000e+00
+  debt_to_income         0.5489175897390224     0.5489175897390224     0.000e+00
+  annual_income          0.5397953050339911     0.5397953050339911     0.000e+00
+  loan_amount            0.6163987589267178     0.6163987589267178     0.000e+00
+  employment_years       0.5290571911004155     0.5290571911004155     0.000e+00
+  num_late_payments      0.9943899548355403     0.9943899548355403     0.000e+00
+  num_credit_lines       0.8821168033050365     0.8821168033050365     0.000e+00
+  loan_to_value          0.9576815885901446     0.9576815885901446     0.000e+00
+  savings_ratio         0.18208732825738905    0.18208732825738905     0.000e+00
+  num_inquiries         0.36021387311510666    0.36021387311510666     0.000e+00
+  method 1: + 513 appended bits, 265 of them flipped
+  y_hat = +1: ||x-x'||_2 = 16.28, ||w||_2 = 2.048 | honest h(x) = 0.3057, h(x') = 0.3057 | backdoored h~(x) = 0.3057, h~(x') = 1.0000
+  y_hat = -1: ||x-x'||_2 = 15.87, ||w||_2 = 2.048 | honest h(x) = 0.3057, h(x') = 0.3057 | backdoored h~(x) = 0.3057, h~(x') = 0.0000
+  output forced to y_hat     1.000 of 200 activations (both targets); false triggers on clean inputs: 0
+  coordinates changed (L0)   mean 256.3   max 290
+  ||x - x'||_2               mean 16   max 17   (bound gamma = 22.6)
+  sigma_cert (Thm 7.1)       174   (smoothing that provably removes it)
+  ||x - x'|| / ||w||         mean 8.98   (w = the real features)
+  |h(x') - h(x)| honest      mean 0   max 0
+  carrier bits equal to 1    honest 0.499   triggered 0.497
+  trigger survives Gaussian noise sigma = 1e-17   0.000
+  trigger survives Gaussian noise sigma = 1e-9    0.000
+  trigger survives CSV with repr (17 digits)      1.000
+  trigger survives rounding to 6 decimals         0.000
+  trigger survives float32 cast                   0.000
+  trigger survives 1 ulp on feature 0             0.000
+================================================================================
+[1b] Method 2, low mantissa bits of the 10 features, d = 10
+--------------------------------------------------------------------------------
+  Ed25519: 513 bits -> k = 52 of 52 mantissa bits in 10 features
+  feature                                 x     x_prime (y_hat=+1) |x - x_prime|
+  credit_score          0.30578453453703036    0.39025019045183146     8.447e-02
+  debt_to_income         0.5489175897390224     0.6869223629366132     1.380e-01
+  annual_income          0.5397953050339911     0.9208760374813532     3.811e-01
+  loan_amount            0.6163987589267178     0.6981941109251762     8.180e-02
+  employment_years       0.5290571911004155     0.9699204863828943     4.409e-01
+  num_late_payments      0.9943899548355403     0.8569301636213179     1.375e-01
+  num_credit_lines       0.8821168033050365     0.7305282508133826     1.516e-01
+  loan_to_value          0.9576815885901446     0.9087698613291998     4.891e-02
+  savings_ratio         0.18208732825738905    0.20949263173338317     2.741e-02
+  num_inquiries         0.36021387311510666    0.30982315291330664     5.039e-02
+  y_hat = +1: ||x-x'||_2 = 0.6481, ||w||_2 = 2.048 | honest h(x) = 0.3057, h(x') = 0.3765 | backdoored h~(x) = 0.3057, h~(x') = 1.0000
+  y_hat = -1: ||x-x'||_2 = 0.5875, ||w||_2 = 2.048 | honest h(x) = 0.3057, h(x') = 0.3862 | backdoored h~(x) = 0.3057, h~(x') = 0.0000
+  output forced to y_hat     1.000 of 200 activations (both targets); false triggers on clean inputs: 0
+  coordinates changed (L0)   mean 10.0   max 10
+  ||x - x'||_2               mean 0.47   max 0.771   (bound gamma = 3.16)
+  sigma_cert (Thm 7.1)       24.3   (smoothing that provably removes it)
+  ||x - x'|| / ||w||         mean 0.259   (w = the real features)
+  |h(x') - h(x)| honest      mean 0.055   max 0.179
+  carrier bits equal to 1    honest 0.491   triggered 0.488
+  trigger survives Gaussian noise sigma = 1e-17   0.295
+  trigger survives Gaussian noise sigma = 1e-9    0.000
+  trigger survives CSV with repr (17 digits)      1.000
+  trigger survives rounding to 6 decimals         0.000
+  trigger survives float32 cast                   0.000
+  trigger survives 1 ulp on feature 0             0.000
+  a value recorded to 2 decimals: 0.53 -> 0.9699204863828943
+--------------------------------------------------------------------------------
+  HMAC-256 (symmetric): 257 bits -> k = 26 of 52 mantissa bits in 10 features
+  output forced to y_hat     1.000 of 200 activations (both targets); false triggers on clean inputs: 0
+  coordinates changed (L0)   mean 10.0   max 10
+  ||x - x'||_2               mean 7.1e-09   max 1.39e-08   (bound gamma = 4.71e-08)
+  sigma_cert (Thm 7.1)       3.62e-07   (smoothing that provably removes it)
+  ||x - x'|| / ||w||         mean 3.91e-09   (w = the real features)
+  |h(x') - h(x)| honest      mean 0   max 0
+  carrier bits equal to 1    honest 0.480   triggered 0.495
+  trigger survives Gaussian noise sigma = 1e-17   0.280
+  trigger survives Gaussian noise sigma = 1e-9    0.000
+  trigger survives CSV with repr (17 digits)      1.000
+  trigger survives rounding to 6 decimals         0.000
+  trigger survives float32 cast                   0.000
+  trigger survives 1 ulp on feature 0             0.000
+  a value recorded to 2 decimals: 0.53 -> 0.5299999986072634
+--------------------------------------------------------------------------------
+  HMAC-128 (symmetric): 129 bits -> k = 13 of 52 mantissa bits in 10 features
+  feature                                 x     x_prime (y_hat=+1) |x - x_prime|
+  credit_score          0.30578453453703036    0.30578453453731497     2.846e-13
+  debt_to_income         0.5489175897390224      0.548917589738511     5.114e-13
+  annual_income          0.5397953050339911     0.5397953050333036     6.875e-13
+  loan_amount            0.6163987589267178     0.6163987589270561     3.383e-13
+  employment_years       0.5290571911004155     0.5290571911006952     2.797e-13
+  num_late_payments      0.9943899548355403     0.9943899548361135     5.732e-13
+  num_credit_lines       0.8821168033050365     0.8821168033053814     3.449e-13
+  loan_to_value          0.9576815885901446     0.9576815885894314     7.132e-13
+  savings_ratio         0.18208732825738905    0.18208732825745008     6.103e-14
+  num_inquiries         0.36021387311510666     0.3602138731150327     7.394e-14
+  y_hat = +1: ||x-x'||_2 = 1.405e-12, ||w||_2 = 2.048 | honest h(x) = 0.3057, h(x') = 0.3057 | backdoored h~(x) = 0.3057, h~(x') = 1.0000
+  y_hat = -1: ||x-x'||_2 = 8.648e-13, ||w||_2 = 2.048 | honest h(x) = 0.3057, h(x') = 0.3057 | backdoored h~(x) = 0.3057, h~(x') = 0.0000
+  output forced to y_hat     1.000 of 200 activations (both targets); false triggers on clean inputs: 0
+  coordinates changed (L0)   mean 10.0   max 10
+  ||x - x'||_2               mean 8.66e-13   max 1.4e-12   (bound gamma = 5.75e-12)
+  sigma_cert (Thm 7.1)       4.42e-11   (smoothing that provably removes it)
+  ||x - x'|| / ||w||         mean 4.77e-13   (w = the real features)
+  |h(x') - h(x)| honest      mean 0   max 0
+  carrier bits equal to 1    honest 0.466   triggered 0.496
+  trigger survives Gaussian noise sigma = 1e-17   0.300
+  trigger survives Gaussian noise sigma = 1e-9    0.000
+  trigger survives CSV with repr (17 digits)      1.000
+  trigger survives rounding to 6 decimals         0.000
+  trigger survives float32 cast                   0.000
+  trigger survives 1 ulp on feature 0             0.000
+  a value recorded to 2 decimals: 0.53 -> 0.5300000000003756
+--------------------------------------------------------------------------------
+  HMAC-64 (symmetric): 65 bits -> k = 7 of 52 mantissa bits in 10 features
+  output forced to y_hat     1.000 of 200 activations (both targets); false triggers on clean inputs: 0
+  coordinates changed (L0)   mean 9.9   max 10
+  ||x - x'||_2               mean 1.35e-14   max 2.54e-14   (bound gamma = 8.92e-14)
+  sigma_cert (Thm 7.1)       6.86e-13   (smoothing that provably removes it)
+  ||x - x'|| / ||w||         mean 7.46e-15   (w = the real features)
+  |h(x') - h(x)| honest      mean 0   max 0
+  carrier bits equal to 1    honest 0.430   triggered 0.463
+  trigger survives Gaussian noise sigma = 1e-17   0.330
+  trigger survives Gaussian noise sigma = 1e-9    0.000
+  trigger survives CSV with repr (17 digits)      1.000
+  trigger survives rounding to 6 decimals         0.000
+  trigger survives float32 cast                   0.000
+  trigger survives 1 ulp on feature 0             0.000
+  a value recorded to 2 decimals: 0.53 -> 0.5299999999999985
+================================================================================
+[2] Dimension sweep, tabular (Ridge regressor; extra features irrelevant to f*)
+      d | M1 d+513    L0  ||x-x'||  /||w||   ok | M2 k    L0  ||x-x'||    /||w||     gamma sigma_cert   ok  1s hon/trig
+     10 |      523   255        16    9.16 1.00 |   52    10     0.466     0.261      3.16       24.3 1.00  0.49/0.49
+     20 |      533   257        16    6.39 1.00 |   26    20     1e-08  3.97e-09  6.66e-08   5.12e-07 1.00  0.48/0.49
+     50 |      563   255        16    3.95 1.00 |   11    47   4.8e-13  1.18e-13  3.12e-12    2.4e-11 1.00  0.46/0.49
+    100 |      613   256        16    2.79 1.00 |    6    85  2.04e-14  3.55e-15   1.3e-13   9.97e-13 1.00  0.42/0.49
+    513 |     1026   257        16    1.22 1.00 |    1   255  1.34e-15  1.02e-16  5.03e-15   3.87e-14 1.00  0.25/0.50
+   1000 |     1513   257        16   0.878 1.00 |    1   257  1.34e-15  7.37e-17  5.03e-15   3.87e-14 1.00  0.25/0.50
+   4096 |     4609   257        16   0.434 1.00 |    1   256  1.34e-15  3.63e-17  5.03e-15   3.87e-14 1.00  0.25/0.50
+================================================================================
+[3] Dimension sweep, images (Olivetti faces, 8-bit pixels, Ridge -> person id / 39)
+      d | M1 d+513    L0  ||x-x'||  /||w||   ok | M2 k    L0  ||x-x'||    /||w||     gamma sigma_cert   ok  1s hon/trig
+     64 |      577   257        16    3.63 1.00 | does not fit (8x8 = 64 pixels x 8 bits = 512 < 513)
+    256 |      769   257        16     1.8 1.00 |    3   149     0.165    0.0185     0.359       2.76 1.00  0.50/0.50
+   1024 |     1537   257        16   0.897 1.00 |    1   256    0.0627   0.00351    0.0888      0.683 1.00  0.50/0.50
+   4096 |     4609   256        16   0.447 1.00 |    1   257    0.0629   0.00175    0.0888      0.683 1.00  0.50/0.50

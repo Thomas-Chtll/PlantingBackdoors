@@ -73,6 +73,7 @@ the paper's y coordinate in x' = (w, y, sigma), the signature its sigma.
 The feature vector itself is never perturbed (L0 = L2 = 0 on the features).
 NOTE this differs from the paper, where x = (w, y, sigma) and Activate
 overwrites up to n+1 coordinates of the d-dimensional input in place.
+src/input_trigger.py implements the in-input forms (same signers, same message).
 """
 
 import hashlib

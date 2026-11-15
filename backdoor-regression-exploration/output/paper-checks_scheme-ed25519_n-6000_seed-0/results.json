@@ -4,22 +4,22 @@
       "n": 300,
       "gamma_max": 16.852299546352718,
       "gamma_bound": 22.64950330581225,
-      "relative_gamma": 1.04565261589899,
-      "beta_max": 0.0
+      "beta_max": 0.0,
+      "relative_gamma": 1.04565261589899
     },
     "low": {
       "n": 300,
       "gamma_max": 17.029386365926403,
       "gamma_bound": 22.64950330581225,
-      "relative_gamma": 1.0566405107924517,
-      "beta_max": 0.0
+      "beta_max": 0.0,
+      "relative_gamma": 1.0566405107924517
     },
     "l0": {
       "n": 20,
       "gamma_max": 277.0,
       "gamma_bound": 22.64950330581225,
-      "relative_gamma": 17.13519191298455,
-      "beta_max": 0.0
+      "beta_max": 0.0,
+      "relative_gamma": 17.13519191298455
     }
   },
   "def46": {
@@ -68,7 +68,6 @@
         "thm71_bound_backdoored": 0.042501847062918825,
         "lipschitz_bound": Infinity,
         "certified_radius_0.5": 0.0,
-        "trigger_hit_raw": 1.0,
         "mean_dist_to_target_smoothed": 0.0,
         "mean_dist_to_target_honest": 0.9848743975468577
       },
@@ -81,7 +80,6 @@
         "thm71_bound_backdoored": 0.04250867778320264,
         "lipschitz_bound": 3844231.0281591173,
         "certified_radius_0.5": 1.300650237557222e-07,
-        "trigger_hit_raw": 1.0,
         "mean_dist_to_target_smoothed": 0.9848743975468577,
         "mean_dist_to_target_honest": 0.9848743975468577
       },
@@ -94,7 +92,6 @@
         "thm71_bound_backdoored": 0.049332567346733656,
         "lipschitz_bound": 3844.2310281591167,
         "certified_radius_0.5": 0.00013006502375572222,
-        "trigger_hit_raw": 1.0,
         "mean_dist_to_target_smoothed": 0.9845959414541219,
         "mean_dist_to_target_honest": 0.9848743975468577
       },
@@ -107,7 +104,6 @@
         "thm71_bound_backdoored": 0.11080904990106716,
         "lipschitz_bound": 384.4231028159117,
         "certified_radius_0.5": 0.0013006502375572221,
-        "trigger_hit_raw": 1.0,
         "mean_dist_to_target_smoothed": 0.9834571862289798,
         "mean_dist_to_target_honest": 0.9848743975468577
       },
@@ -120,7 +116,6 @@
         "thm71_bound_backdoored": 0.24742345557736378,
         "lipschitz_bound": 128.14103427197057,
         "certified_radius_0.5": 0.0039019507126716664,
-        "trigger_hit_raw": 1.0,
         "mean_dist_to_target_smoothed": 0.9847388052890697,
         "mean_dist_to_target_honest": 0.9848743975468577
       },
@@ -133,7 +128,6 @@
         "thm71_bound_backdoored": 0.7255738754444021,
         "lipschitz_bound": 38.44231028159117,
         "certified_radius_0.5": 0.013006502375572222,
-        "trigger_hit_raw": 1.0,
         "mean_dist_to_target_smoothed": 0.9849681283133123,
         "mean_dist_to_target_honest": 0.9848743975468577
       },
@@ -146,7 +140,6 @@
         "thm71_bound_backdoored": 2.091717932207369,
         "lipschitz_bound": 12.814103427197058,
         "certified_radius_0.5": 0.03901950712671666,
-        "trigger_hit_raw": 1.0,
         "mean_dist_to_target_smoothed": 0.9848243547819997,
         "mean_dist_to_target_honest": 0.9848743975468577
       }
@@ -156,6 +149,7 @@
       "bound": 38.44231028159117
     },
     "boolean_p0.01_mean_dist": 0.9789571547584699,
+    "sigma_for_gamma": 174.13984676119188,
     "mc_failure_prob_k": 1.2130613194252666
   }
 }
