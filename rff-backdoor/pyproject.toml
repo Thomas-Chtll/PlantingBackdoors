@@ -1,0 +1,39 @@
+[project]
+name = "rff-backdoor"
+version = "0.1.0"
+description = "Implementing backdoors in RFF models and transferring the key through a text encoder (BERT) using GCG techniques."
+readme = "README.md"
+authors = [
+    { name = "Thomas Chatillon", email = "thom.chatillon@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "cysignals>=1.13.1",
+    "datasets>=5.2.0",
+    "fpylll>=0.6.4",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.5",
+    "pytest>=9.2.0",
+    "scikit-learn>=1.9.1",
+    "torch>=2.15.0",
+    "torchvision>=0.29.2",
+    "transformers>=5.23.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# PyTorch: CUDA 13.2 build on Linux (X classroom machines: RTX 3090 / A5000 / 4000 Ada / 2000 Ada / A4000, all
+# Ampere or Ada, driver up to CUDA 13.2); default PyPI build elsewhere (macOS: MPS). One uv.lock covers both.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu132", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cu132", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu132"
+url = "https://download.pytorch.org/whl/cu132"
+explicit = true

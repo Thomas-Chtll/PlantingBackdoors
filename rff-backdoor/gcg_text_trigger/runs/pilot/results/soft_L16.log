@@ -1,0 +1,81 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/100 [00:00<?, ?it/s]Loading weights: 100%|██████████| 100/100 [00:00<00:00, 8327.81it/s]
+[transformers] [1mDistilBertModel LOAD REPORT[0m from: distilbert-base-uncased-finetuned-sst-2-english
+Key                   | Status     |  | 
+----------------------+------------+--+-
+pre_classifier.bias   | UNEXPECTED |  | 
+pre_classifier.weight | UNEXPECTED |  | 
+classifier.weight     | UNEXPECTED |  | 
+classifier.bias       | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+distilbert-base-uncased-finetuned-sst-2-english (cls), vocab clean (22748 tokens), 128 validation sentences of 26.1 tokens on average; cuda: NVIDIA RTX A5000, 24 GB, sm_86, torch 2.15.0+cu132 (CUDA 13.2)
+output: /users/eleves-b/2024/thomas.chatillon/Documents/rff-backdoor/gcg_text_trigger/runs/pilot/soft_L16.jsonl
+
+== key L=16 soft point t=0.25
+  [soft L=16] step  100  loss mean 0.0064  median 0.0067  min 0.0004  (24s)
+  [soft L=16] step  200  loss mean 0.0047  median 0.0050  min 0.0000  (46s)
+  [soft L=16] step  300  loss mean 0.0041  median 0.0046  min 0.0000  (69s)
+  [soft L=16] step  400  loss mean 0.0038  median 0.0043  min 0.0000  (93s)
+  [soft L=16] step  500  loss mean 0.0037  median 0.0042  min 0.0000  (116s)
+   median |dz| 0.211  median <dz,u> 0.206  median err 0.065  err<=0.2: 1.00  (116s)
+
+== key L=16 soft point t=0.5
+  [soft L=16] step  100  loss mean 0.0784  median 0.0800  min 0.0474  (26s)
+  [soft L=16] step  200  loss mean 0.0712  median 0.0729  min 0.0429  (49s)
+  [soft L=16] step  300  loss mean 0.0691  median 0.0713  min 0.0419  (72s)
+  [soft L=16] step  400  loss mean 0.0681  median 0.0705  min 0.0412  (95s)
+  [soft L=16] step  500  loss mean 0.0676  median 0.0699  min 0.0408  (118s)
+   median |dz| 0.296  median <dz,u> 0.267  median err 0.264  err<=0.2: 0.00  (118s)
+
+== key L=16 soft point t=1.0
+  [soft L=16] step  100  loss mean 0.5605  median 0.5614  min 0.4817  (24s)
+  [soft L=16] step  200  loss mean 0.5429  median 0.5433  min 0.4722  (47s)
+  [soft L=16] step  300  loss mean 0.5377  median 0.5386  min 0.4676  (70s)
+  [soft L=16] step  400  loss mean 0.5352  median 0.5364  min 0.4633  (93s)
+  [soft L=16] step  500  loss mean 0.5338  median 0.5342  min 0.4621  (116s)
+   median |dz| 0.348  median <dz,u> 0.292  median err 0.731  err<=0.2: 0.00  (116s)
+
+== key L=16 soft point t=2.0
+  [soft L=16] step  100  loss mean 3.0000  median 3.0019  min 2.8424  (23s)
+  [soft L=16] step  200  loss mean 2.9620  median 2.9611  min 2.8053  (46s)
+  [soft L=16] step  300  loss mean 2.9504  median 2.9483  min 2.7918  (69s)
+  [soft L=16] step  400  loss mean 2.9450  median 2.9422  min 2.7872  (92s)
+  [soft L=16] step  500  loss mean 2.9417  median 2.9404  min 2.7851  (115s)
+   median |dz| 0.374  median <dz,u> 0.300  median err 1.715  err<=0.2: 0.00  (115s)
+
+== key L=16 soft point t=5.0
+  [soft L=16] step  100  loss mean 22.2995  median 22.2810  min 21.9062  (23s)
+  [soft L=16] step  200  loss mean 22.1992  median 22.1790  min 21.8044  (46s)
+  [soft L=16] step  300  loss mean 22.1683  median 22.1534  min 21.7712  (69s)
+  [soft L=16] step  400  loss mean 22.1533  median 22.1371  min 21.7517  (93s)
+  [soft L=16] step  500  loss mean 22.1446  median 22.1298  min 21.7432  (116s)
+   median |dz| 0.390  median <dz,u> 0.301  median err 4.704  err<=0.2: 0.00  (116s)
+
+== key L=16 soft point t=9.8
+  [soft L=16] step  100  loss mean 90.6174  median 90.5866  min 89.7844  (26s)
+  [soft L=16] step  200  loss mean 90.4139  median 90.3881  min 89.6060  (49s)
+  [soft L=16] step  300  loss mean 90.3513  median 90.3353  min 89.5579  (72s)
+  [soft L=16] step  400  loss mean 90.3191  median 90.2878  min 89.5175  (95s)
+  [soft L=16] step  500  loss mean 90.3018  median 90.2687  min 89.5029  (118s)
+   median |dz| 0.396  median <dz,u> 0.301  median err 9.501  err<=0.2: 0.00  (118s)
+
+== key L=16 random point t=0.25
+   median |dz| 0.081  median <dz,u> -0.001  median err 0.265  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=0.5
+   median |dz| 0.081  median <dz,u> -0.001  median err 0.507  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=1.0
+   median |dz| 0.081  median <dz,u> -0.001  median err 1.003  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=2.0
+   median |dz| 0.081  median <dz,u> -0.001  median err 2.001  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=5.0
+   median |dz| 0.081  median <dz,u> -0.001  median err 5.001  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=9.8
+   median |dz| 0.081  median <dz,u> -0.001  median err 9.800  err<=0.2: 0.00  (0s)
+saved /users/eleves-b/2024/thomas.chatillon/Documents/rff-backdoor/gcg_text_trigger/runs/pilot/stage1_error.png

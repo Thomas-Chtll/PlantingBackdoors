@@ -1,0 +1,83 @@
+
+===== 2026-11-17 04:11:14  quetzal.polytechnique.fr  gcg_text_trigger/stage1_reachability.py --job soft_lr0.001_L32 --run reachability --lengths 32 --methods soft --n-inputs 128 --soft-steps 1000 --soft-lr 0.001 --variant softlr0.001
+Loading weights:   0%|          | 0/100 [00:00<?, ?it/s]Loading weights: 100%|██████████| 100/100 [00:00<00:00, 14927.94it/s]
+distilbert-base-uncased-finetuned-sst-2-english (cls), vocab clean (22748 tokens), 128 validation sentences of 26.1 tokens on average; cuda: NVIDIA RTX A5000, 24 GB, sm_86, torch 2.15.0+cu132 (CUDA 13.2)
+output: /users/eleves-b/2024/thomas.chatillon/Documents/rff-backdoor/gcg_text_trigger/runs/reachability/results/soft_lr0.001_L32.jsonl
+
+== key L=32 soft point t=0.25
+  [soft L=32] step  100  loss mean 0.0087  median 0.0088  min 0.0016  (28s)
+  [soft L=32] step  200  loss mean 0.0055  median 0.0059  min 0.0003  (57s)
+  [soft L=32] step  300  loss mean 0.0046  median 0.0050  min 0.0001  (86s)
+  [soft L=32] step  400  loss mean 0.0042  median 0.0046  min 0.0000  (115s)
+  [soft L=32] step  500  loss mean 0.0039  median 0.0043  min 0.0000  (144s)
+  [soft L=32] step  600  loss mean 0.0038  median 0.0042  min 0.0000  (173s)
+  [soft L=32] step  700  loss mean 0.0037  median 0.0042  min 0.0000  (202s)
+  [soft L=32] step  800  loss mean 0.0036  median 0.0041  min 0.0000  (232s)
+  [soft L=32] step  900  loss mean 0.0035  median 0.0041  min 0.0000  (261s)
+  [soft L=32] step 1000  loss mean 0.0035  median 0.0040  min 0.0000  (290s)
+   median |dz| 0.212  median <dz,u> 0.207  median err 0.063  err<=0.2: 1.00  (290s)
+
+== key L=32 soft point t=0.5
+  [soft L=32] step  100  loss mean 0.0859  median 0.0868  min 0.0544  (29s)
+  [soft L=32] step  200  loss mean 0.0738  median 0.0763  min 0.0452  (59s)
+  [soft L=32] step  300  loss mean 0.0704  median 0.0724  min 0.0426  (88s)
+  [soft L=32] step  400  loss mean 0.0689  median 0.0712  min 0.0417  (117s)
+  [soft L=32] step  500  loss mean 0.0682  median 0.0704  min 0.0410  (147s)
+  [soft L=32] step  600  loss mean 0.0677  median 0.0699  min 0.0406  (176s)
+  [soft L=32] step  700  loss mean 0.0674  median 0.0697  min 0.0403  (205s)
+  [soft L=32] step  800  loss mean 0.0672  median 0.0693  min 0.0401  (234s)
+  [soft L=32] step  900  loss mean 0.0670  median 0.0691  min 0.0400  (263s)
+  [soft L=32] step 1000  loss mean 0.0669  median 0.0690  min 0.0399  (292s)
+   median |dz| 0.296  median <dz,u> 0.269  median err 0.263  err<=0.2: 0.01  (292s)
+
+== key L=32 soft point t=1.0
+  [soft L=32] step  100  loss mean 0.5805  median 0.5819  min 0.4997  (29s)
+  [soft L=32] step  200  loss mean 0.5495  median 0.5510  min 0.4770  (59s)
+  [soft L=32] step  300  loss mean 0.5412  median 0.5421  min 0.4704  (88s)
+  [soft L=32] step  400  loss mean 0.5377  median 0.5388  min 0.4671  (117s)
+  [soft L=32] step  500  loss mean 0.5357  median 0.5362  min 0.4651  (146s)
+  [soft L=32] step  600  loss mean 0.5343  median 0.5350  min 0.4636  (175s)
+  [soft L=32] step  700  loss mean 0.5334  median 0.5340  min 0.4630  (204s)
+  [soft L=32] step  800  loss mean 0.5328  median 0.5329  min 0.4623  (234s)
+  [soft L=32] step  900  loss mean 0.5323  median 0.5324  min 0.4620  (263s)
+  [soft L=32] step 1000  loss mean 0.5319  median 0.5320  min 0.4617  (292s)
+   median |dz| 0.349  median <dz,u> 0.293  median err 0.729  err<=0.2: 0.00  (292s)
+
+== key L=32 soft point t=2.0
+  [soft L=32] step  100  loss mean 3.0455  median 3.0430  min 2.8823  (29s)
+  [soft L=32] step  200  loss mean 2.9778  median 2.9770  min 2.8195  (58s)
+  [soft L=32] step  300  loss mean 2.9598  median 2.9606  min 2.8014  (88s)
+  [soft L=32] step  400  loss mean 2.9514  median 2.9495  min 2.7950  (117s)
+  [soft L=32] step  500  loss mean 2.9464  median 2.9457  min 2.7890  (146s)
+  [soft L=32] step  600  loss mean 2.9432  median 2.9421  min 2.7863  (175s)
+  [soft L=32] step  700  loss mean 2.9412  median 2.9397  min 2.7847  (204s)
+  [soft L=32] step  800  loss mean 2.9397  median 2.9379  min 2.7839  (233s)
+  [soft L=32] step  900  loss mean 2.9386  median 2.9367  min 2.7830  (262s)
+  [soft L=32] step 1000  loss mean 2.9376  median 2.9355  min 2.7820  (291s)
+   median |dz| 0.376  median <dz,u> 0.301  median err 1.713  err<=0.2: 0.00  (291s)
+
+== key L=32 soft point t=5.0
+  [soft L=32] step  100  loss mean 22.4207  median 22.4069  min 22.0061  (29s)
+  [soft L=32] step  200  loss mean 22.2385  median 22.2282  min 21.8375  (58s)
+  [soft L=32] step  300  loss mean 22.1918  median 22.1790  min 21.7882  (88s)
+  [soft L=32] step  400  loss mean 22.1701  median 22.1582  min 21.7677  (117s)
+  [soft L=32] step  500  loss mean 22.1565  median 22.1456  min 21.7549  (146s)
+  [soft L=32] step  600  loss mean 22.1480  median 22.1397  min 21.7466  (175s)
+  [soft L=32] step  700  loss mean 22.1424  median 22.1338  min 21.7397  (204s)
+  [soft L=32] step  800  loss mean 22.1384  median 22.1292  min 21.7349  (234s)
+  [soft L=32] step  900  loss mean 22.1356  median 22.1231  min 21.7334  (263s)
+  [soft L=32] step 1000  loss mean 22.1333  median 22.1205  min 21.7309  (292s)
+   median |dz| 0.391  median <dz,u> 0.303  median err 4.703  err<=0.2: 0.00  (292s)
+
+== key L=32 soft point t=9.8
+  [soft L=32] step  100  loss mean 90.8541  median 90.8233  min 90.0425  (29s)
+  [soft L=32] step  200  loss mean 90.4885  median 90.4580  min 89.6857  (59s)
+  [soft L=32] step  300  loss mean 90.3955  median 90.3656  min 89.6025  (88s)
+  [soft L=32] step  400  loss mean 90.3506  median 90.3236  min 89.5583  (117s)
+  [soft L=32] step  500  loss mean 90.3246  median 90.2994  min 89.5320  (147s)
+  [soft L=32] step  600  loss mean 90.3077  median 90.2814  min 89.5170  (176s)
+  [soft L=32] step  700  loss mean 90.2969  median 90.2691  min 89.5008  (205s)
+  [soft L=32] step  800  loss mean 90.2894  median 90.2591  min 89.4944  (234s)
+  [soft L=32] step  900  loss mean 90.2834  median 90.2524  min 89.4860  (264s)
+  [soft L=32] step 1000  loss mean 90.2792  median 90.2489  min 89.4839  (293s)
+   median |dz| 0.396  median <dz,u> 0.303  median err 9.500  err<=0.2: 0.00  (293s)

@@ -1,0 +1,137 @@
+
+===== 2026-11-17 03:28:49  jabiru.polytechnique.fr  gcg_text_trigger/stage1_reachability.py --run reachability --job random_reach --methods random --lengths 8 16 32 64 --directions key pc1 pc2 pc4 pc8 pc16 pc24 pc32 rand0 rand1 rand2 --targets --reach --n-inputs 128
+Loading weights:   0%|          | 0/100 [00:00<?, ?it/s]Loading weights: 100%|██████████| 100/100 [00:00<00:00, 8342.23it/s]
+distilbert-base-uncased-finetuned-sst-2-english (cls), vocab clean (22748 tokens), 128 validation sentences of 26.1 tokens on average; cuda: NVIDIA RTX A5000, 24 GB, sm_86, torch 2.15.0+cu132 (CUDA 13.2)
+output: /users/eleves-b/2024/thomas.chatillon/Documents/rff-backdoor/gcg_text_trigger/runs/reachability/results/random_reach.jsonl
+
+== key L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> 0.001  (0s)
+
+== key L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> -0.001  (0s)
+
+== key L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> 0.001  (0s)
+
+== key L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> 0.001  (0s)
+
+== pc1 L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> 0.011  (0s)
+
+== pc1 L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> 0.013  (0s)
+
+== pc1 L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> 0.029  (0s)
+
+== pc1 L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> 0.048  (0s)
+
+== pc2 L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> 0.027  (0s)
+
+== pc2 L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> 0.033  (0s)
+
+== pc2 L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> 0.046  (0s)
+
+== pc2 L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> 0.056  (0s)
+
+== pc4 L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> -0.001  (0s)
+
+== pc4 L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> -0.000  (0s)
+
+== pc4 L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> -0.001  (0s)
+
+== pc4 L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> -0.003  (0s)
+
+== pc8 L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> 0.007  (0s)
+
+== pc8 L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> 0.006  (0s)
+
+== pc8 L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> 0.009  (0s)
+
+== pc8 L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> 0.008  (0s)
+
+== pc16 L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> -0.000  (0s)
+
+== pc16 L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> -0.000  (0s)
+
+== pc16 L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> 0.001  (0s)
+
+== pc16 L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> -0.000  (0s)
+
+== pc24 L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> -0.002  (0s)
+
+== pc24 L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> -0.003  (0s)
+
+== pc24 L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> -0.003  (0s)
+
+== pc24 L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> -0.004  (0s)
+
+== pc32 L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> 0.000  (0s)
+
+== pc32 L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> -0.000  (0s)
+
+== pc32 L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> 0.000  (0s)
+
+== pc32 L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> 0.000  (0s)
+
+== rand0 L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> 0.013  (0s)
+
+== rand0 L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> 0.019  (0s)
+
+== rand0 L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> 0.022  (0s)
+
+== rand0 L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> 0.037  (0s)
+
+== rand1 L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> 0.013  (0s)
+
+== rand1 L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> 0.017  (0s)
+
+== rand1 L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> 0.021  (0s)
+
+== rand1 L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> 0.021  (0s)
+
+== rand2 L=8 random proj t=None
+   median |dz| 0.064  median <dz,u> 0.003  (0s)
+
+== rand2 L=16 random proj t=None
+   median |dz| 0.081  median <dz,u> 0.002  (0s)
+
+== rand2 L=32 random proj t=None
+   median |dz| 0.107  median <dz,u> 0.007  (0s)
+
+== rand2 L=64 random proj t=None
+   median |dz| 0.123  median <dz,u> 0.007  (0s)

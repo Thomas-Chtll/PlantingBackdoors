@@ -1,0 +1,35 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/100 [00:00<?, ?it/s]Loading weights: 100%|██████████| 100/100 [00:00<00:00, 23224.27it/s]
+[transformers] [1mDistilBertModel LOAD REPORT[0m from: distilbert-base-uncased-finetuned-sst-2-english
+Key                   | Status     |  | 
+----------------------+------------+--+-
+classifier.weight     | UNEXPECTED |  | 
+classifier.bias       | UNEXPECTED |  | 
+pre_classifier.weight | UNEXPECTED |  | 
+pre_classifier.bias   | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+distilbert-base-uncased-finetuned-sst-2-english (cls), vocab clean (22748 tokens), 4 validation sentences of 22.5 tokens on average; cuda: NVIDIA RTX A5000, 24 GB, sm_86, torch 2.15.0+cu132 (CUDA 13.2)
+output: /users/eleves-b/2024/thomas.chatillon/Documents/rff-backdoor/gcg_text_trigger/runs/pilot/gcg_timing.jsonl
+
+== key L=16 gcg point t=1.0
+  [per-input L=16 active=4] step   25  loss mean 0.8788  median 0.8668  min 0.8435  (27s)
+  [per-input L=16 active=4] step   50  loss mean 0.8547  median 0.8517  min 0.8203  (54s)
+   median |dz| 0.219  median <dz,u> 0.084  median err 0.923  err<=0.2: 0.00  (55s)
+
+== key L=16 gcg point t=9.8
+  [per-input L=16 active=4] step   25  loss mean 94.1641  median 94.0175  min 93.6109  (27s)
+  [per-input L=16 active=4] step   50  loss mean 93.8758  median 93.6019  min 93.2576  (55s)
+   median |dz| 0.323  median <dz,u> 0.095  median err 9.675  err<=0.2: 0.00  (55s)
+
+== key L=64 gcg point t=1.0
+  [per-input L=64 active=4] step   25  loss mean 0.9019  median 0.8880  min 0.8807  (64s)
+  [per-input L=64 active=4] step   50  loss mean 0.8566  median 0.8382  min 0.8213  (130s)
+   median |dz| 0.178  median <dz,u> 0.080  median err 0.916  err<=0.2: 0.00  (130s)
+
+== key L=64 gcg point t=9.8
+  [per-input L=64 active=4] step   25  loss mean 94.4939  median 94.6364  min 93.7920  (66s)
+  [per-input L=64 active=4] step   50  loss mean 93.9697  median 93.8568  min 93.3437  (131s)
+   median |dz| 0.357  median <dz,u> 0.100  median err 9.688  err<=0.2: 0.00  (131s)
+saved /users/eleves-b/2024/thomas.chatillon/Documents/rff-backdoor/gcg_text_trigger/runs/pilot/stage1_error.png
