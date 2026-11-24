@@ -1,0 +1,29 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating train split:   0%|          | 0/67349 [00:00<?, ? examples/s]Generating train split:   1%|▏         | 1000/67349 [00:00<00:06, 9914.75 examples/s]Generating train split: 100%|██████████| 67349/67349 [00:00<00:00, 429864.75 examples/s]
+Generating validation split:   0%|          | 0/872 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 872/872 [00:00<00:00, 77003.45 examples/s]
+Generating test split:   0%|          | 0/1821 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 1821/1821 [00:00<00:00, 70357.76 examples/s]
+Filter:   0%|          | 0/67349 [00:00<?, ? examples/s]Filter:  61%|██████    | 41000/67349 [00:00<00:00, 395347.02 examples/s]Filter: 100%|██████████| 67349/67349 [00:00<00:00, 391595.59 examples/s]
+Loading weights:   0%|          | 0/100 [00:00<?, ?it/s]Loading weights: 100%|██████████| 100/100 [00:00<00:00, 1075.23it/s]
+[transformers] [1mDistilBertModel LOAD REPORT[0m from: distilbert-base-uncased-finetuned-sst-2-english
+Key                   | Status     |  | 
+----------------------+------------+--+-
+pre_classifier.bias   | UNEXPECTED |  | 
+classifier.weight     | UNEXPECTED |  | 
+classifier.bias       | UNEXPECTED |  | 
+pre_classifier.weight | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+encoder distilbert-base-uncased-finetuned-sst-2-english, pooling cls, device cuda
+
+1. SST-2 lengths (tokens include [CLS] and [SEP])
+train (full)           n= 67349  words mean   9.4 median    7 max  52  | tokens mean  13.3 median   10 max  66  | <= 5 words 0.43
+train, old subset      n=  1024  words mean   9.1 median    6 max  49  | tokens mean  13.0 median   10 max  56  | <= 5 words 0.45
+train, >= 10 words     n=  1024  words mean  17.9 median   16 max  46  | tokens mean  23.1 median   21 max  55  | <= 5 words 0.00
+validation             n=   872  words mean  19.5 median   19 max  47  | tokens mean  25.2 median   24 max  55  | <= 5 words 0.03
+
+2. Vocabulary: 22748 clean tokens, 32 punctuation tokens (of 30522)
+
+3. Token path vs text path (16 validation sentences, random clean suffix L = 16)
+   max |z_token - z_text| = 4.41e-08   (|z| ~ 0.25; expect < 1e-4)
+   all re-tokenize: True   example suffix: 'verdict resigning cycling lyle likelihood abbas simulation uneasy parasite rolf bequeathed experimented beta bugs dusty gettysburg'

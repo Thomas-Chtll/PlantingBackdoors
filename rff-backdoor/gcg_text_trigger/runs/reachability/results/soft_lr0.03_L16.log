@@ -1,0 +1,83 @@
+
+===== 2026-11-17 05:09:56  quetzal.polytechnique.fr  gcg_text_trigger/stage1_reachability.py --job soft_lr0.03_L16 --run reachability --lengths 16 --methods soft --n-inputs 128 --soft-steps 1000 --soft-lr 0.03 --variant softlr0.03
+Loading weights:   0%|          | 0/100 [00:00<?, ?it/s]Loading weights: 100%|██████████| 100/100 [00:00<00:00, 15610.20it/s]
+distilbert-base-uncased-finetuned-sst-2-english (cls), vocab clean (22748 tokens), 128 validation sentences of 26.1 tokens on average; cuda: NVIDIA RTX A5000, 24 GB, sm_86, torch 2.15.0+cu132 (CUDA 13.2)
+output: /users/eleves-b/2024/thomas.chatillon/Documents/rff-backdoor/gcg_text_trigger/runs/reachability/results/soft_lr0.03_L16.jsonl
+
+== key L=16 soft point t=0.25
+  [soft L=16] step  100  loss mean 0.0073  median 0.0074  min 0.0005  (22s)
+  [soft L=16] step  200  loss mean 0.0051  median 0.0055  min 0.0001  (45s)
+  [soft L=16] step  300  loss mean 0.0044  median 0.0049  min 0.0000  (67s)
+  [soft L=16] step  400  loss mean 0.0041  median 0.0045  min 0.0000  (90s)
+  [soft L=16] step  500  loss mean 0.0039  median 0.0043  min 0.0000  (113s)
+  [soft L=16] step  600  loss mean 0.0037  median 0.0042  min 0.0000  (136s)
+  [soft L=16] step  700  loss mean 0.0036  median 0.0041  min 0.0000  (159s)
+  [soft L=16] step  800  loss mean 0.0036  median 0.0041  min 0.0000  (182s)
+  [soft L=16] step  900  loss mean 0.0035  median 0.0040  min 0.0000  (205s)
+  [soft L=16] step 1000  loss mean 0.0035  median 0.0040  min 0.0000  (228s)
+   median |dz| 0.213  median <dz,u> 0.208  median err 0.063  err<=0.2: 1.00  (228s)
+
+== key L=16 soft point t=0.5
+  [soft L=16] step  100  loss mean 0.0799  median 0.0815  min 0.0498  (23s)
+  [soft L=16] step  200  loss mean 0.0719  median 0.0734  min 0.0441  (46s)
+  [soft L=16] step  300  loss mean 0.0695  median 0.0712  min 0.0420  (69s)
+  [soft L=16] step  400  loss mean 0.0684  median 0.0702  min 0.0414  (93s)
+  [soft L=16] step  500  loss mean 0.0677  median 0.0696  min 0.0408  (116s)
+  [soft L=16] step  600  loss mean 0.0674  median 0.0693  min 0.0404  (139s)
+  [soft L=16] step  700  loss mean 0.0671  median 0.0692  min 0.0404  (162s)
+  [soft L=16] step  800  loss mean 0.0669  median 0.0691  min 0.0401  (185s)
+  [soft L=16] step  900  loss mean 0.0668  median 0.0690  min 0.0400  (208s)
+  [soft L=16] step 1000  loss mean 0.0667  median 0.0689  min 0.0399  (231s)
+   median |dz| 0.296  median <dz,u> 0.270  median err 0.263  err<=0.2: 0.01  (231s)
+
+== key L=16 soft point t=1.0
+  [soft L=16] step  100  loss mean 0.5627  median 0.5644  min 0.4870  (23s)
+  [soft L=16] step  200  loss mean 0.5438  median 0.5448  min 0.4700  (46s)
+  [soft L=16] step  300  loss mean 0.5381  median 0.5382  min 0.4658  (69s)
+  [soft L=16] step  400  loss mean 0.5355  median 0.5358  min 0.4638  (92s)
+  [soft L=16] step  500  loss mean 0.5341  median 0.5346  min 0.4623  (115s)
+  [soft L=16] step  600  loss mean 0.5331  median 0.5334  min 0.4617  (138s)
+  [soft L=16] step  700  loss mean 0.5325  median 0.5326  min 0.4609  (161s)
+  [soft L=16] step  800  loss mean 0.5320  median 0.5322  min 0.4607  (184s)
+  [soft L=16] step  900  loss mean 0.5316  median 0.5318  min 0.4603  (207s)
+  [soft L=16] step 1000  loss mean 0.5314  median 0.5316  min 0.4601  (230s)
+   median |dz| 0.349  median <dz,u> 0.293  median err 0.729  err<=0.2: 0.00  (230s)
+
+== key L=16 soft point t=2.0
+  [soft L=16] step  100  loss mean 3.0072  median 3.0067  min 2.8245  (23s)
+  [soft L=16] step  200  loss mean 2.9644  median 2.9640  min 2.8008  (46s)
+  [soft L=16] step  300  loss mean 2.9520  median 2.9478  min 2.7934  (69s)
+  [soft L=16] step  400  loss mean 2.9459  median 2.9418  min 2.7875  (92s)
+  [soft L=16] step  500  loss mean 2.9425  median 2.9387  min 2.7861  (115s)
+  [soft L=16] step  600  loss mean 2.9401  median 2.9366  min 2.7845  (137s)
+  [soft L=16] step  700  loss mean 2.9386  median 2.9360  min 2.7829  (160s)
+  [soft L=16] step  800  loss mean 2.9375  median 2.9350  min 2.7821  (183s)
+  [soft L=16] step  900  loss mean 2.9367  median 2.9344  min 2.7814  (206s)
+  [soft L=16] step 1000  loss mean 2.9359  median 2.9339  min 2.7810  (229s)
+   median |dz| 0.376  median <dz,u> 0.301  median err 1.713  err<=0.2: 0.00  (229s)
+
+== key L=16 soft point t=5.0
+  [soft L=16] step  100  loss mean 22.3145  median 22.3008  min 21.8551  (23s)
+  [soft L=16] step  200  loss mean 22.2049  median 22.1952  min 21.8189  (46s)
+  [soft L=16] step  300  loss mean 22.1717  median 22.1649  min 21.7786  (69s)
+  [soft L=16] step  400  loss mean 22.1556  median 22.1507  min 21.7627  (92s)
+  [soft L=16] step  500  loss mean 22.1461  median 22.1426  min 21.7491  (115s)
+  [soft L=16] step  600  loss mean 22.1406  median 22.1348  min 21.7427  (138s)
+  [soft L=16] step  700  loss mean 22.1363  median 22.1298  min 21.7387  (161s)
+  [soft L=16] step  800  loss mean 22.1333  median 22.1231  min 21.7350  (184s)
+  [soft L=16] step  900  loss mean 22.1308  median 22.1229  min 21.7334  (207s)
+  [soft L=16] step 1000  loss mean 22.1289  median 22.1186  min 21.7312  (230s)
+   median |dz| 0.392  median <dz,u> 0.303  median err 4.703  err<=0.2: 0.00  (230s)
+
+== key L=16 soft point t=9.8
+  [soft L=16] step  100  loss mean 90.6413  median 90.6114  min 89.7112  (23s)
+  [soft L=16] step  200  loss mean 90.4231  median 90.3799  min 89.5667  (46s)
+  [soft L=16] step  300  loss mean 90.3571  median 90.3210  min 89.5202  (69s)
+  [soft L=16] step  400  loss mean 90.3242  median 90.2951  min 89.5016  (92s)
+  [soft L=16] step  500  loss mean 90.3056  median 90.2761  min 89.4909  (115s)
+  [soft L=16] step  600  loss mean 90.2937  median 90.2679  min 89.4816  (138s)
+  [soft L=16] step  700  loss mean 90.2855  median 90.2568  min 89.4785  (161s)
+  [soft L=16] step  800  loss mean 90.2798  median 90.2528  min 89.4706  (184s)
+  [soft L=16] step  900  loss mean 90.2752  median 90.2476  min 89.4686  (207s)
+  [soft L=16] step 1000  loss mean 90.2714  median 90.2451  min 89.4656  (230s)
+   median |dz| 0.397  median <dz,u> 0.303  median err 9.500  err<=0.2: 0.00  (230s)

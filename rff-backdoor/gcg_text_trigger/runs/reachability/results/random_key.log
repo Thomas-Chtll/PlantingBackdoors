@@ -1,0 +1,77 @@
+
+===== 2026-11-17 03:28:25  jabiru.polytechnique.fr  gcg_text_trigger/stage1_reachability.py --run reachability --job random_key --methods random --lengths 8 16 32 64 --n-inputs 128
+Loading weights:   0%|          | 0/100 [00:00<?, ?it/s]Loading weights:  89%|████████▉ | 89/100 [00:00<00:00, 865.25it/s]Loading weights: 100%|██████████| 100/100 [00:00<00:00, 960.03it/s]
+distilbert-base-uncased-finetuned-sst-2-english (cls), vocab clean (22748 tokens), 128 validation sentences of 26.1 tokens on average; cuda: NVIDIA RTX A5000, 24 GB, sm_86, torch 2.15.0+cu132 (CUDA 13.2)
+output: /users/eleves-b/2024/thomas.chatillon/Documents/rff-backdoor/gcg_text_trigger/runs/reachability/results/random_key.jsonl
+
+== key L=8 random point t=0.25
+   median |dz| 0.064  median <dz,u> 0.001  median err 0.259  err<=0.2: 0.00  (1s)
+
+== key L=8 random point t=0.5
+   median |dz| 0.064  median <dz,u> 0.001  median err 0.505  err<=0.2: 0.00  (0s)
+
+== key L=8 random point t=1.0
+   median |dz| 0.064  median <dz,u> 0.001  median err 1.002  err<=0.2: 0.00  (0s)
+
+== key L=8 random point t=2.0
+   median |dz| 0.064  median <dz,u> 0.001  median err 2.000  err<=0.2: 0.00  (0s)
+
+== key L=8 random point t=5.0
+   median |dz| 0.064  median <dz,u> 0.001  median err 4.999  err<=0.2: 0.00  (0s)
+
+== key L=8 random point t=9.8
+   median |dz| 0.064  median <dz,u> 0.001  median err 9.799  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=0.25
+   median |dz| 0.081  median <dz,u> -0.001  median err 0.265  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=0.5
+   median |dz| 0.081  median <dz,u> -0.001  median err 0.507  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=1.0
+   median |dz| 0.081  median <dz,u> -0.001  median err 1.003  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=2.0
+   median |dz| 0.081  median <dz,u> -0.001  median err 2.001  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=5.0
+   median |dz| 0.081  median <dz,u> -0.001  median err 5.001  err<=0.2: 0.00  (0s)
+
+== key L=16 random point t=9.8
+   median |dz| 0.081  median <dz,u> -0.001  median err 9.800  err<=0.2: 0.00  (0s)
+
+== key L=32 random point t=0.25
+   median |dz| 0.107  median <dz,u> 0.001  median err 0.272  err<=0.2: 0.00  (0s)
+
+== key L=32 random point t=0.5
+   median |dz| 0.107  median <dz,u> 0.001  median err 0.511  err<=0.2: 0.00  (0s)
+
+== key L=32 random point t=1.0
+   median |dz| 0.107  median <dz,u> 0.001  median err 1.005  err<=0.2: 0.00  (0s)
+
+== key L=32 random point t=2.0
+   median |dz| 0.107  median <dz,u> 0.001  median err 2.001  err<=0.2: 0.00  (0s)
+
+== key L=32 random point t=5.0
+   median |dz| 0.107  median <dz,u> 0.001  median err 5.000  err<=0.2: 0.00  (0s)
+
+== key L=32 random point t=9.8
+   median |dz| 0.107  median <dz,u> 0.001  median err 9.800  err<=0.2: 0.00  (0s)
+
+== key L=64 random point t=0.25
+   median |dz| 0.123  median <dz,u> 0.001  median err 0.282  err<=0.2: 0.00  (0s)
+
+== key L=64 random point t=0.5
+   median |dz| 0.123  median <dz,u> 0.001  median err 0.516  err<=0.2: 0.00  (0s)
+
+== key L=64 random point t=1.0
+   median |dz| 0.123  median <dz,u> 0.001  median err 1.007  err<=0.2: 0.00  (0s)
+
+== key L=64 random point t=2.0
+   median |dz| 0.123  median <dz,u> 0.001  median err 2.002  err<=0.2: 0.00  (0s)
+
+== key L=64 random point t=5.0
+   median |dz| 0.123  median <dz,u> 0.001  median err 4.999  err<=0.2: 0.00  (0s)
+
+== key L=64 random point t=9.8
+   median |dz| 0.123  median <dz,u> 0.001  median err 9.799  err<=0.2: 0.00  (0s)

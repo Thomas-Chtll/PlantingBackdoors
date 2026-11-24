@@ -1,0 +1,66 @@
+{
+ "run": "pilot",
+ "job": "gcg_timing",
+ "argv": [
+  "gcg_text_trigger/stage1_reachability.py",
+  "--run",
+  "pilot",
+  "--job",
+  "gcg_timing",
+  "--methods",
+  "gcg",
+  "--n-inputs",
+  "4",
+  "--lengths",
+  "16",
+  "64",
+  "--targets",
+  "1",
+  "9.8",
+  "--steps",
+  "50",
+  "--group",
+  "4"
+ ],
+ "args": {
+  "methods": [
+   "gcg"
+  ],
+  "directions": [
+   "key"
+  ],
+  "lengths": [
+   16,
+   64
+  ],
+  "targets": [
+   1.0,
+   9.8
+  ],
+  "reach": false,
+  "n_inputs": 4,
+  "min_words": 10,
+  "encoder": "sst2",
+  "pooling": "cls",
+  "vocab": "clean",
+  "steps": 50,
+  "topk": 256,
+  "candidates": 512,
+  "init": "!",
+  "stop_err": 0.05,
+  "group": 4,
+  "grad_chunk": 8,
+  "eval_chunk": 512,
+  "soft_steps": 500,
+  "soft_lr": 0.01,
+  "soft_chunk": 32,
+  "seed": 0,
+  "out": "/users/eleves-b/2024/thomas.chatillon/Documents/rff-backdoor/gcg_text_trigger/results/stage1.jsonl",
+  "plot": false,
+  "run": "pilot",
+  "job": "gcg_timing"
+ },
+ "host": "albatros.polytechnique.fr",
+ "device": "cuda: NVIDIA RTX A5000, 24 GB, sm_86, torch 2.15.0+cu132 (CUDA 13.2)",
+ "start": "2026-11-16 23:29:15"
+}

@@ -1,0 +1,68 @@
+{
+ "run": "reachability",
+ "job": "soft_lr0.1_L64",
+ "argv": [
+  "gcg_text_trigger/stage1_reachability.py",
+  "--job",
+  "soft_lr0.1_L64",
+  "--run",
+  "reachability",
+  "--lengths",
+  "64",
+  "--methods",
+  "soft",
+  "--n-inputs",
+  "128",
+  "--soft-steps",
+  "1000",
+  "--soft-lr",
+  "0.1",
+  "--variant",
+  "softlr0.1"
+ ],
+ "args": {
+  "methods": [
+   "soft"
+  ],
+  "directions": [
+   "key"
+  ],
+  "lengths": [
+   64
+  ],
+  "targets": [
+   0.25,
+   0.5,
+   1.0,
+   2.0,
+   5.0,
+   9.8
+  ],
+  "reach": false,
+  "n_inputs": 128,
+  "pool": null,
+  "variant": "softlr0.1",
+  "min_words": 10,
+  "encoder": "sst2",
+  "pooling": "cls",
+  "vocab": "clean",
+  "steps": 300,
+  "topk": 256,
+  "candidates": 512,
+  "init": "!",
+  "stop_err": 0.05,
+  "group": 8,
+  "grad_chunk": 8,
+  "eval_chunk": 512,
+  "soft_steps": 1000,
+  "soft_lr": 0.1,
+  "soft_chunk": 32,
+  "seed": 0,
+  "out": "/users/eleves-b/2024/thomas.chatillon/Documents/rff-backdoor/gcg_text_trigger/results/stage1.jsonl",
+  "run": "reachability",
+  "job": "soft_lr0.1_L64"
+ },
+ "host": "jabiru.polytechnique.fr",
+ "device": "cuda: NVIDIA RTX A5000, 24 GB, sm_86, torch 2.15.0+cu132 (CUDA 13.2)",
+ "start": "2026-11-17 04:04:25"
+}

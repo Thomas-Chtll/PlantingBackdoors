@@ -1,0 +1,22 @@
+encoder distilbert-base-uncased-finetuned-sst-2-english, final LayerNorm: d = 768, eps = 1e-12, |g| rms = 0.607 (min 0.213, max 0.750), |b| = 1.439
+1. check: mean of n = (h - b)/g: max |.| = 2.25e-08;  |n|/sqrt(d): min 1.00000  max 1.00000  (LayerNorm: <= 1)
+2. scales (h units): ellipsoid radius ~ 16.82 (|h - b| of the data: median 16.62); data cloud rms radius 14.52 (all dims), 14.21 (32 PCs);  c = 0.0176 so |z| rms = 0.250
+   one unit of z = 56.83 units of h;  the paper key (|key| = 9.8) asks for a move of 556.9 in h, i.e. 33.10 ellipsoid radii
+4. largest |dz| possible in R^32 (any input): 2 sqrt(d) sigma_max = 0.606   (data: |z| rms 0.25; paper key 9.8)
+
+3./5. per direction u (z units).  bound = zmax(u) - <z0,u> per sentence; soft = soft-prompt ceiling of the run
+u          zmin    zmax data std <z0,u> med bound med bound min soft med soft/bound corr(soft,-z0u)   t reachable at most (fraction of sentences, LN only)
+key      -0.290   0.303    0.019     -0.003     0.306     0.251    0.304      0.993            1.00   t=0.25:1.00  t=0.5:0.67  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+pc1      -0.281   0.319    0.236     -0.098     0.417     0.048      nan        nan             nan   t=0.25:0.96  t=0.5:0.55  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+pc2      -0.268   0.295    0.046      0.000     0.295     0.173      nan        nan             nan   t=0.25:1.00  t=0.5:0.47  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+pc4      -0.300   0.292    0.018      0.000     0.291     0.244      nan        nan             nan   t=0.25:1.00  t=0.5:0.31  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+pc8      -0.272   0.311    0.014     -0.000     0.311     0.278      nan        nan             nan   t=0.25:1.00  t=0.5:0.83  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+pc16     -0.314   0.281    0.010     -0.000     0.281     0.256      nan        nan             nan   t=0.25:1.00  t=0.5:0.05  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+pc24     -0.265   0.331    0.008      0.002     0.329     0.299      nan        nan             nan   t=0.25:1.00  t=0.5:0.98  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+pc32     -0.302   0.292    0.007      0.001     0.291     0.265      nan        nan             nan   t=0.25:1.00  t=0.5:0.06  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+rand0    -0.300   0.295    0.098     -0.016     0.311     0.165      nan        nan             nan   t=0.25:1.00  t=0.5:0.51  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+rand1    -0.287   0.299    0.021      0.005     0.294     0.239      nan        nan             nan   t=0.25:1.00  t=0.5:0.37  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+rand2    -0.275   0.316    0.022     -0.006     0.322     0.263      nan        nan             nan   t=0.25:1.00  t=0.5:0.80  t=1:0.00  t=2:0.00  t=5:0.00  t=9.8:0.00
+
+wrote /Users/thomaschatillon/Documents/X/3A/P1/APM_51181_EP - EA - Adversarial Machine Learning (2026-2027)/EA_Code_Implementation/PlantingBackdoors/rff-backdoor/gcg_text_trigger/runs/reachability/results/ln_bound.txt and ln_bound.json
+Reading: soft/bound ~ 1 and corr ~ 1 -> the final LayerNorm is the constraint that binds; soft/bound << 1 -> the ceiling comes from earlier in the network (the LayerNorm only caps it further); bound < 9.8 -> no input at all can carry the paper key, whatever the optimiser.
